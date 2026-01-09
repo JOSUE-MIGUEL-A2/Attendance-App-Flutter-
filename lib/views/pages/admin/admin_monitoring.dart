@@ -45,7 +45,7 @@ class _AdminMonitoringState extends State<AdminMonitoring> {
                   valueListenable: eventsNotifier,
                   builder: (context, events, child) {
                     return DropdownButtonFormField<String>(
-                      value: filterEventId,
+                      initialValue: filterEventId,
                       decoration: const InputDecoration(
                         labelText: 'Filter by Event',
                         prefixIcon: Icon(Icons.event),
@@ -185,7 +185,7 @@ class _AdminMonitoringState extends State<AdminMonitoring> {
                       margin: const EdgeInsets.only(bottom: 12),
                       child: ListTile(
                         leading: CircleAvatar(
-                          backgroundColor: _getStatusColor(record.status).withOpacity(0.2),
+                          backgroundColor: _getStatusColor(record.status),
                           child: Icon(
                             _getStatusIcon(record.status),
                             color: _getStatusColor(record.status),
@@ -214,7 +214,7 @@ class _AdminMonitoringState extends State<AdminMonitoring> {
                             vertical: 6,
                           ),
                           decoration: BoxDecoration(
-                            color: _getStatusColor(record.status).withOpacity(0.1),
+                            color: _getStatusColor(record.status),
                             borderRadius: BorderRadius.circular(20),
                             border: Border.all(
                               color: _getStatusColor(record.status),

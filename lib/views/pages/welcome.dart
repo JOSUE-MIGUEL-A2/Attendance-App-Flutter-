@@ -50,24 +50,26 @@ class _WelcomeState extends State<Welcome> {
       return;
     }
 
-    // Create user based on role
     currentUserNotifier.value = CurrentUser(
       id: DateTime.now().millisecondsSinceEpoch.toString(),
       name: nameController.text.isNotEmpty ? nameController.text : 'Test User',
       email: emailController.text,
       role: selectedRole,
       section: selectedRole == UserRole.student ? 'Section A' : null,
-      studentId: selectedRole == UserRole.student ? studentIdController.text : null,
+      studentId: selectedRole == UserRole.student
+          ? studentIdController.text
+          : null,
     );
 
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
-        content: Text(isSignIn ? 'Welcome back!' : 'Account created successfully!'),
+        content: Text(
+          isSignIn ? 'Welcome Tradeans!' : 'Account created successfully!',
+        ),
         backgroundColor: Colors.green,
       ),
     );
 
-    // Navigate to appropriate dashboard
     Navigator.pushReplacement(
       context,
       MaterialPageRoute(
@@ -88,45 +90,57 @@ class _WelcomeState extends State<Welcome> {
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
               const SizedBox(height: 20),
-              
-              // Lottie Animation
+
               Hero(
                 tag: 'logo',
                 child: Lottie.asset(
                   'assets/login_animation.json',
                   height: 200,
-                  repeat: true,
-                  animate: true,
+                  width: 200,
+                  fit: BoxFit.contain,
                 ),
               ),
-              
+
               const SizedBox(height: 20),
-              
-              Text(
-                isSignIn ? 'Welcome Back!' : 'Create Account',
-                style: const TextStyle(
-                  fontSize: 28,
-                  fontWeight: FontWeight.bold,
-                ),
-                textAlign: TextAlign.center,
+
+              Stack(
+                alignment: Alignment.center,
+                children: [
+                  Text(
+                    isSignIn ? 'Welcome Tradeans!' : 'Create Account',
+                    style: TextStyle(
+                      fontSize: 28,
+                      fontWeight: FontWeight.bold,
+                      foreground: Paint()
+                        ..style = PaintingStyle.stroke
+                        ..strokeWidth = 3
+                        ..color = Colors.black,
+                    ),
+                    textAlign: TextAlign.center,
+                  ),
+
+                  Text(
+                    isSignIn ? 'Welcome Tradeans!' : 'Create Account',
+                    style: TextStyle(
+                      fontSize: 28,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.amber.shade400,
+                    ),
+                    textAlign: TextAlign.center,
+                  ),
+                ],
               ),
-              
+
               const SizedBox(height: 8),
-              
+
               Text(
-                isSignIn 
-                    ? 'Sign in to continue' 
-                    : 'Sign up to get started',
-                style: TextStyle(
-                  fontSize: 16,
-                  color: Colors.grey.shade600,
-                ),
+                isSignIn ? 'Sign in to continue' : 'Sign up to get started',
+                style: TextStyle(fontSize: 16, color: Colors.grey.shade600),
                 textAlign: TextAlign.center,
               ),
-              
+
               const SizedBox(height: 30),
-              
-              // Role Selection
+
               Container(
                 padding: const EdgeInsets.all(4),
                 decoration: BoxDecoration(
@@ -137,7 +151,8 @@ class _WelcomeState extends State<Welcome> {
                   children: [
                     Expanded(
                       child: GestureDetector(
-                        onTap: () => setState(() => selectedRole = UserRole.student),
+                        onTap: () =>
+                            setState(() => selectedRole = UserRole.student),
                         child: Container(
                           padding: const EdgeInsets.symmetric(vertical: 12),
                           decoration: BoxDecoration(
@@ -173,7 +188,8 @@ class _WelcomeState extends State<Welcome> {
                     ),
                     Expanded(
                       child: GestureDetector(
-                        onTap: () => setState(() => selectedRole = UserRole.admin),
+                        onTap: () =>
+                            setState(() => selectedRole = UserRole.admin),
                         child: Container(
                           padding: const EdgeInsets.symmetric(vertical: 12),
                           decoration: BoxDecoration(
@@ -210,9 +226,9 @@ class _WelcomeState extends State<Welcome> {
                   ],
                 ),
               ),
-              
+
               const SizedBox(height: 24),
-              
+
               if (!isSignIn) ...[
                 TextField(
                   controller: nameController,
@@ -225,7 +241,7 @@ class _WelcomeState extends State<Welcome> {
                   ),
                 ),
                 const SizedBox(height: 16),
-                
+
                 if (selectedRole == UserRole.student) ...[
                   TextField(
                     controller: studentIdController,
@@ -240,7 +256,7 @@ class _WelcomeState extends State<Welcome> {
                   const SizedBox(height: 16),
                 ],
               ],
-              
+
               TextField(
                 controller: emailController,
                 keyboardType: TextInputType.emailAddress,
@@ -252,9 +268,9 @@ class _WelcomeState extends State<Welcome> {
                   ),
                 ),
               ),
-              
+
               const SizedBox(height: 16),
-              
+
               TextField(
                 controller: passwordController,
                 obscureText: _obscurePassword,
@@ -262,19 +278,22 @@ class _WelcomeState extends State<Welcome> {
                   labelText: 'Password',
                   prefixIcon: const Icon(Icons.lock),
                   suffixIcon: IconButton(
-                    icon: Icon(_obscurePassword 
-                        ? Icons.visibility 
-                        : Icons.visibility_off),
-                    onPressed: () => setState(() => _obscurePassword = !_obscurePassword),
+                    icon: Icon(
+                      _obscurePassword
+                          ? Icons.visibility
+                          : Icons.visibility_off,
+                    ),
+                    onPressed: () =>
+                        setState(() => _obscurePassword = !_obscurePassword),
                   ),
                   border: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(12),
                   ),
                 ),
               ),
-              
+
               const SizedBox(height: 24),
-              
+
               SizedBox(
                 height: 50,
                 child: ElevatedButton(
@@ -295,15 +314,15 @@ class _WelcomeState extends State<Welcome> {
                   ),
                 ),
               ),
-              
+
               const SizedBox(height: 16),
-              
+
               Row(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
                   Text(
-                    isSignIn 
-                        ? "Don't have an account? " 
+                    isSignIn
+                        ? "Don't have an account? "
                         : "Already have an account? ",
                   ),
                   InkWell(

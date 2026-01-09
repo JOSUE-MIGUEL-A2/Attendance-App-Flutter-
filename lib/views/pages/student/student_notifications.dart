@@ -99,7 +99,7 @@ class StudentNotifications extends StatelessWidget {
                           Container(
                             padding: const EdgeInsets.all(10),
                             decoration: BoxDecoration(
-                              color: _getNotificationColor(notification.type).withOpacity(0.1),
+                              color: _getNotificationColor(notification.type),
                               shape: BoxShape.circle,
                             ),
                             child: Icon(

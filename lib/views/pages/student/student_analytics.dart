@@ -183,7 +183,7 @@ class StudentAnalytics extends StatelessWidget {
                           Container(
                             padding: const EdgeInsets.all(16),
                             decoration: BoxDecoration(
-                              color: _getPerformanceColor(thisMonthPercentage).withOpacity(0.1),
+                              color: _getPerformanceColor(thisMonthPercentage),
                               shape: BoxShape.circle,
                             ),
                             child: Text(
@@ -218,7 +218,7 @@ class StudentAnalytics extends StatelessWidget {
 
               // Performance indicator
               Card(
-                color: _getPerformanceColor(attendancePercentage).withOpacity(0.1),
+                color: _getPerformanceColor(attendancePercentage),
                 child: Padding(
                   padding: const EdgeInsets.all(20),
                   child: Row(
@@ -344,7 +344,7 @@ class StudentAnalytics extends StatelessWidget {
             Container(
               padding: const EdgeInsets.all(12),
               decoration: BoxDecoration(
-                color: color.withOpacity(0.1),
+                color: color,
                 borderRadius: BorderRadius.circular(10),
               ),
               child: Icon(icon, color: color),

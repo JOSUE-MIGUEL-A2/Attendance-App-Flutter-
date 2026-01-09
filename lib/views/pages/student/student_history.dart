@@ -20,7 +20,7 @@ class _StudentHistoryState extends State<StudentHistory> {
         // Filter bar
         Container(
           padding: const EdgeInsets.all(16),
-          color: Theme.of(context).primaryColor.withOpacity(0.1),
+          color: Theme.of(context).primaryColor,
           child: Row(
             children: [
               const Icon(Icons.filter_list),
@@ -288,7 +288,7 @@ class _StudentHistoryState extends State<StudentHistory> {
     return Container(
       padding: const EdgeInsets.all(10),
       decoration: BoxDecoration(
-        color: color.withOpacity(0.1),
+        color: color,
         shape: BoxShape.circle,
       ),
       child: Icon(icon, color: color, size: 24),
@@ -321,7 +321,7 @@ class _StudentHistoryState extends State<StudentHistory> {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
       decoration: BoxDecoration(
-        color: color.withOpacity(0.1),
+        color: color,
         borderRadius: BorderRadius.circular(20),
         border: Border.all(color: color),
       ),

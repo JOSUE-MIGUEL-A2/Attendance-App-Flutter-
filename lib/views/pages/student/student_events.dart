@@ -13,7 +13,7 @@ class StudentEvents extends StatelessWidget {
       child: Column(
         children: [
           Material(
-            color: Theme.of(context).primaryColor.withOpacity(0.1),
+            color: Theme.of(context).primaryColor,
             child: const TabBar(
               tabs: [
                 Tab(text: 'Today', icon: Icon(Icons.today)),
@@ -318,7 +318,7 @@ class StudentEvents extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
-        color: color.withOpacity(0.1),
+        color: color,
         borderRadius: BorderRadius.circular(8),
         border: Border.all(color: color),
       ),
@@ -343,7 +343,7 @@ class StudentEvents extends StatelessWidget {
           Text(
             'Checked in at ${timestamp.hour}:${timestamp.minute.toString().padLeft(2, '0')}',
             style: TextStyle(
-              color: color.withOpacity(0.8),
+              color: color,
               fontSize: 12,
             ),
           ),

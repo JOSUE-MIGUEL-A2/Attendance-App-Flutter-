@@ -35,7 +35,7 @@ class AdminSanctions extends StatelessWidget {
                         }).toSet().toList();
 
                     return DropdownButtonFormField<String>(
-                      value: selectedStudentId,
+                      initialValue: selectedStudentId,
                       decoration: const InputDecoration(
                         labelText: 'Select Student',
                         prefixIcon: Icon(Icons.person),
@@ -57,7 +57,7 @@ class AdminSanctions extends StatelessWidget {
                 
                 // Sanction Type
                 DropdownButtonFormField<String>(
-                  value: sanctionType,
+                  initialValue: sanctionType,
                   decoration: const InputDecoration(
                     labelText: 'Sanction Type',
                     prefixIcon: Icon(Icons.category),
@@ -308,7 +308,7 @@ class AdminSanctions extends StatelessWidget {
                     Container(
                       padding: const EdgeInsets.all(10),
                       decoration: BoxDecoration(
-                        color: color.withOpacity(0.1),
+                        color: color,
                         shape: BoxShape.circle,
                       ),
                       child: Icon(

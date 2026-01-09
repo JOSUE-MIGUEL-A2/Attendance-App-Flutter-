@@ -392,7 +392,7 @@ class AdminApprovals extends StatelessWidget {
                           ],
                         ),
                       );
-                    }).toList(),
+                    }),
                   ],
                 ),
               );

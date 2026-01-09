@@ -30,7 +30,7 @@ class AdminDashboard extends StatelessWidget {
                   Container(
                     padding: const EdgeInsets.all(12),
                     decoration: BoxDecoration(
-                      color: Colors.white.withOpacity(0.2),
+                      color: Colors.white,
                       shape: BoxShape.circle,
                     ),
                     child: const Icon(Icons.admin_panel_settings, color: Colors.white, size: 40),
@@ -453,7 +453,7 @@ class _StatCard extends StatelessWidget {
             Text(
               subtitle,
               style: TextStyle(
-                color: color.withOpacity(0.7),
+                color: color,
                 fontSize: 10,
                 fontWeight: FontWeight.w500,
               ),
@@ -494,7 +494,7 @@ class _QuickActionCard extends StatelessWidget {
               Container(
                 padding: const EdgeInsets.all(12),
                 decoration: BoxDecoration(
-                  color: color.withOpacity(0.1),
+                  color: color,
                   borderRadius: BorderRadius.circular(10),
                 ),
                 child: Icon(icon, color: color, size: 28),

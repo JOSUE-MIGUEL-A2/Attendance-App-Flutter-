@@ -162,7 +162,7 @@ class AdminStudents extends StatelessWidget {
                             vertical: 4,
                           ),
                           decoration: BoxDecoration(
-                            color: _getStatusColor(record.status).withOpacity(0.1),
+                            color: _getStatusColor(record.status),
                             borderRadius: BorderRadius.circular(12),
                             border: Border.all(
                               color: _getStatusColor(record.status),
@@ -179,7 +179,7 @@ class AdminStudents extends StatelessWidget {
                         ),
                       ),
                     );
-                  }).toList(),
+                  }),
               ],
             ),
           ),
@@ -295,10 +295,10 @@ class AdminStudents extends StatelessWidget {
                         ),
                         decoration: BoxDecoration(
                           color: attendanceRate >= 80
-                              ? Colors.green.withOpacity(0.1)
+                              ? Colors.green
                               : attendanceRate >= 60
-                                  ? Colors.orange.withOpacity(0.1)
-                                  : Colors.red.withOpacity(0.1),
+                                  ? Colors.orange
+                                  : Colors.red,
                           borderRadius: BorderRadius.circular(20),
                           border: Border.all(
                             color: attendanceRate >= 80

@@ -10,6 +10,7 @@ import 'package:thesis_attendance/views/pages/student/student_notifications.dart
 import 'package:thesis_attendance/views/pages/student/student_profile.dart';
 import 'package:thesis_attendance/views/pages/settings.dart';
 import 'package:thesis_attendance/views/pages/welcome.dart';
+import 'package:thesis_attendance/views/widgets/lottie_nav_item.dart';
 
 class StudentWidgetTree extends StatelessWidget {
   const StudentWidgetTree({super.key});
@@ -277,34 +278,30 @@ class StudentWidgetTree extends StatelessWidget {
     return ValueListenableBuilder(
       valueListenable: selectedPageNotifier,
       builder: (context, selectedPage, child) {
-        return NavigationBar(
-          destinations: const [
-            NavigationDestination(
-              icon: Icon(Icons.home_outlined),
-              selectedIcon: Icon(Icons.home),
-              label: "Home",
-            ),
-            NavigationDestination(
-              icon: Icon(Icons.event_outlined),
-              selectedIcon: Icon(Icons.event),
-              label: "Events",
-            ),
-            NavigationDestination(
-              icon: Icon(Icons.history),
-              selectedIcon: Icon(Icons.history),
-              label: "History",
-            ),
-            NavigationDestination(
-              icon: Icon(Icons.analytics_outlined),
-              selectedIcon: Icon(Icons.analytics),
-              label: "Analytics",
-            ),
-          ],
+        return LottieNavigationBar(
+          selectedIndex: selectedPage,
           onDestinationSelected: (int value) {
             selectedPageNotifier.value = value;
           },
-          selectedIndex: selectedPage,
-          animationDuration: const Duration(milliseconds: 400),
+          selectedLabelColor: Colors.blue.shade700, 
+          destinations: const [
+            LottieNavDestination(
+              lottieAsset: 'assets/home.json', 
+              label: "Home",
+            ),
+            LottieNavDestination(
+              lottieAsset: 'assets/events.json',  
+              label: "Events",
+            ),
+            LottieNavDestination(
+              lottieAsset: 'assets/history.json', 
+              label: "History",
+            ),
+            LottieNavDestination(
+              lottieAsset: 'assets/analytics.json', 
+              label: "Analytics",
+            ),
+          ],
         );
       },
     );

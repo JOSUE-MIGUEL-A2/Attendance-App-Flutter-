@@ -87,7 +87,6 @@ class StudentDocuments extends StatelessWidget {
                 status: 'pending',
               );
 
-              // Update record
               final records = attendanceRecordsNotifier.value;
               final index = records.indexWhere((r) => r.id == record.id);
               if (index != -1) {
@@ -96,7 +95,6 @@ class StudentDocuments extends StatelessWidget {
                 attendanceRecordsNotifier.value = [...records];
               }
 
-              // Add notification
               notificationsNotifier.value = [
                 ...notificationsNotifier.value,
                 AppNotification(
@@ -204,7 +202,7 @@ class StudentDocuments extends StatelessWidget {
                           Container(
                             padding: const EdgeInsets.all(10),
                             decoration: BoxDecoration(
-                              color: _getStatusColor(record.status).withOpacity(0.1),
+                              color: _getStatusColor(record.status),
                               shape: BoxShape.circle,
                             ),
                             child: Icon(
@@ -292,7 +290,7 @@ class StudentDocuments extends StatelessWidget {
                             margin: const EdgeInsets.only(bottom: 8),
                             padding: const EdgeInsets.all(12),
                             decoration: BoxDecoration(
-                              color: _getDocStatusColor(doc.status).withOpacity(0.1),
+                              color: _getDocStatusColor(doc.status),
                               borderRadius: BorderRadius.circular(8),
                               border: Border.all(color: _getDocStatusColor(doc.status)),
                             ),
@@ -447,7 +445,7 @@ class StudentDocuments extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
       decoration: BoxDecoration(
-        color: _getStatusColor(status).withOpacity(0.1),
+        color: _getStatusColor(status),
         borderRadius: BorderRadius.circular(20),
         border: Border.all(color: _getStatusColor(status)),
       ),

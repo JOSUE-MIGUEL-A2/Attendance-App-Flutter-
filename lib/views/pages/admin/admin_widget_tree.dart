@@ -8,6 +8,7 @@ import 'package:thesis_attendance/views/pages/admin/admin_sanctions.dart';
 import 'package:thesis_attendance/views/pages/admin/admin_students.dart';
 import 'package:thesis_attendance/views/pages/settings.dart';
 import 'package:thesis_attendance/views/pages/welcome.dart';
+import 'package:thesis_attendance/views/widgets/lottie_nav_item.dart';
 
 class AdminWidgetTree extends StatelessWidget {
   const AdminWidgetTree({super.key});
@@ -169,7 +170,7 @@ class AdminWidgetTree extends StatelessWidget {
                       vertical: 4,
                     ),
                     decoration: BoxDecoration(
-                      color: Colors.white.withOpacity(0.2),
+                      color: Colors.white,
                       borderRadius: BorderRadius.circular(12),
                     ),
                     child: const Text(
@@ -328,34 +329,30 @@ class AdminWidgetTree extends StatelessWidget {
     return ValueListenableBuilder(
       valueListenable: selectedPageNotifier,
       builder: (context, selectedPage, child) {
-        return NavigationBar(
-          destinations: const [
-            NavigationDestination(
-              icon: Icon(Icons.dashboard_outlined),
-              selectedIcon: Icon(Icons.dashboard),
-              label: "Dashboard",
-            ),
-            NavigationDestination(
-              icon: Icon(Icons.event_outlined),
-              selectedIcon: Icon(Icons.event),
-              label: "Events",
-            ),
-            NavigationDestination(
-              icon: Icon(Icons.monitor_outlined),
-              selectedIcon: Icon(Icons.monitor),
-              label: "Monitor",
-            ),
-            NavigationDestination(
-              icon: Icon(Icons.approval_outlined),
-              selectedIcon: Icon(Icons.approval),
-              label: "Approvals",
-            ),
-          ],
+        return LottieNavigationBar(
+          selectedIndex: selectedPage,
           onDestinationSelected: (int value) {
             selectedPageNotifier.value = value;
           },
-          selectedIndex: selectedPage,
-          animationDuration: const Duration(milliseconds: 400),
+          selectedLabelColor: Colors.purple.shade700,  // Only affects label color
+          destinations: const [
+            LottieNavDestination(
+              lottieAsset: 'assets/home.json',  // Replace with your file
+              label: "Home",
+            ),
+            LottieNavDestination(
+              lottieAsset: 'assets/events.json',  // Replace with your file (can reuse from student)
+              label: "Events",
+            ),
+            LottieNavDestination(
+              lottieAsset: 'assets/monitor.json',  // Replace with your file
+              label: "Monitor",
+            ),
+            LottieNavDestination(
+              lottieAsset: 'assets/approvals.json',  // Replace with your file
+              label: "Approvals",
+            ),
+          ],
         );
       },
     );

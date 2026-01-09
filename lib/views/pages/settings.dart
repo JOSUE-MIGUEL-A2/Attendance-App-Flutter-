@@ -20,7 +20,6 @@ class Settings extends StatelessWidget {
             return Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                // Appearance Section
                 const Text(
                   "App Appearance",
                   style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
@@ -223,7 +222,7 @@ class Settings extends StatelessWidget {
                         ),
                         const SizedBox(height: 12),
                         DropdownButtonFormField<String>(
-                          value: settings.language,
+                          initialValue: settings.language,
                           decoration: InputDecoration(
                             prefixIcon: const Icon(Icons.language),
                             border: OutlineInputBorder(
