@@ -13,14 +13,18 @@ class StudentEvents extends StatelessWidget {
       child: Column(
         children: [
           Material(
-            color: Theme.of(context).primaryColor,
-            child: const TabBar(
-              tabs: [
+            color:Theme.of(context).primaryColor,
+            elevation: 100,
+            child: TabBar(
+              labelColor: Colors.amber, 
+              unselectedLabelColor: Colors.amber.shade100,
+              tabs: const [
                 Tab(text: 'Today', icon: Icon(Icons.today)),
                 Tab(text: 'Upcoming', icon: Icon(Icons.upcoming)),
               ],
             ),
           ),
+
           Expanded(
             child: TabBarView(
               children: [
@@ -38,7 +42,9 @@ class StudentEvents extends StatelessWidget {
     return ValueListenableBuilder(
       valueListenable: eventsNotifier,
       builder: (context, events, child) {
-        final todayEvents = events.where((e) => e.isToday && e.isActive).toList();
+        final todayEvents = events
+            .where((e) => e.isToday && e.isActive)
+            .toList();
 
         if (todayEvents.isEmpty) {
           return Center(
@@ -49,10 +55,7 @@ class StudentEvents extends StatelessWidget {
                 const SizedBox(height: 16),
                 Text(
                   'No events scheduled for today',
-                  style: TextStyle(
-                    fontSize: 18,
-                    color: Colors.grey.shade600,
-                  ),
+                  style: TextStyle(fontSize: 18, color: Colors.grey.shade600),
                 ),
               ],
             ),
@@ -81,7 +84,12 @@ class StudentEvents extends StatelessWidget {
             return Card(
               margin: const EdgeInsets.only(bottom: 16),
               child: InkWell(
-                onTap: () => _showEventDetails(context, event, attendance, hasAttendance),
+                onTap: () => _showEventDetails(
+                  context,
+                  event,
+                  attendance,
+                  hasAttendance,
+                ),
                 borderRadius: BorderRadius.circular(12),
                 child: Padding(
                   padding: const EdgeInsets.all(16),
@@ -117,7 +125,11 @@ class StudentEvents extends StatelessWidget {
                                 const SizedBox(height: 4),
                                 Row(
                                   children: [
-                                    Icon(Icons.access_time, size: 16, color: Colors.grey.shade600),
+                                    Icon(
+                                      Icons.access_time,
+                                      size: 16,
+                                      color: Colors.grey.shade600,
+                                    ),
                                     const SizedBox(width: 4),
                                     Text(
                                       '${formatTime(event.startTime)} - ${formatTime(event.endTime)}',
@@ -143,7 +155,10 @@ class StudentEvents extends StatelessWidget {
                       ),
                       const Divider(height: 24),
                       if (hasAttendance)
-                        _buildAttendanceStatus(attendance.status, attendance.timestamp)
+                        _buildAttendanceStatus(
+                          attendance.status,
+                          attendance.timestamp,
+                        )
                       else
                         Container(
                           padding: const EdgeInsets.all(12),
@@ -155,7 +170,11 @@ class StudentEvents extends StatelessWidget {
                           child: Row(
                             mainAxisAlignment: MainAxisAlignment.center,
                             children: [
-                              Icon(Icons.warning, color: Colors.orange, size: 20),
+                              Icon(
+                                Icons.warning,
+                                color: Colors.orange,
+                                size: 20,
+                              ),
                               const SizedBox(width: 8),
                               const Text(
                                 'Not Checked In',
@@ -182,7 +201,9 @@ class StudentEvents extends StatelessWidget {
     return ValueListenableBuilder(
       valueListenable: eventsNotifier,
       builder: (context, events, child) {
-        final upcomingEvents = events.where((e) => e.isUpcoming && e.isActive).toList();
+        final upcomingEvents = events
+            .where((e) => e.isUpcoming && e.isActive)
+            .toList();
         upcomingEvents.sort((a, b) => a.date.compareTo(b.date));
 
         if (upcomingEvents.isEmpty) {
@@ -190,14 +211,15 @@ class StudentEvents extends StatelessWidget {
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                Icon(Icons.event_available, size: 80, color: Colors.grey.shade400),
+                Icon(
+                  Icons.event_available,
+                  size: 80,
+                  color: Colors.grey.shade400,
+                ),
                 const SizedBox(height: 16),
                 Text(
                   'No upcoming events',
-                  style: TextStyle(
-                    fontSize: 18,
-                    color: Colors.grey.shade600,
-                  ),
+                  style: TextStyle(fontSize: 18, color: Colors.grey.shade600),
                 ),
               ],
             ),
@@ -264,15 +286,16 @@ class StudentEvents extends StatelessWidget {
                           vertical: 6,
                         ),
                         decoration: BoxDecoration(
-                          color: Colors.blue.shade50,
                           borderRadius: BorderRadius.circular(20),
                         ),
                         child: Text(
-                          daysUntil == 0 ? 'Today' : 'In $daysUntil day${daysUntil > 1 ? 's' : ''}',
+                          daysUntil == 0
+                              ? 'Today'
+                              : 'In $daysUntil day${daysUntil > 1 ? 's' : ''}',
                           style: TextStyle(
                             color: Colors.blue.shade700,
                             fontWeight: FontWeight.bold,
-                            fontSize: 12,
+                            fontSize: 14,
                           ),
                         ),
                       ),
@@ -342,17 +365,19 @@ class StudentEvents extends StatelessWidget {
           const SizedBox(height: 4),
           Text(
             'Checked in at ${timestamp.hour}:${timestamp.minute.toString().padLeft(2, '0')}',
-            style: TextStyle(
-              color: color,
-              fontSize: 12,
-            ),
+            style: TextStyle(color: color, fontSize: 12),
           ),
         ],
       ),
     );
   }
 
-  void _showEventDetails(BuildContext context, AttendanceEvent event, AttendanceRecord? attendance, bool hasAttendance) {
+  void _showEventDetails(
+    BuildContext context,
+    AttendanceEvent event,
+    AttendanceRecord? attendance,
+    bool hasAttendance,
+  ) {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
@@ -362,11 +387,27 @@ class StudentEvents extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.start,
             mainAxisSize: MainAxisSize.min,
             children: [
-              _buildDetailRow(Icons.description, 'Description', event.description),
+              _buildDetailRow(
+                Icons.description,
+                'Description',
+                event.description,
+              ),
               const Divider(height: 24),
-              _buildDetailRow(Icons.calendar_today, 'Date', '${event.date.day}/${event.date.month}/${event.date.year}'),
-              _buildDetailRow(Icons.access_time, 'Time', '${formatTime(event.startTime)} - ${formatTime(event.endTime)}'),
-              _buildDetailRow(Icons.schedule, 'Late Cutoff', formatTime(event.lateCutoff)),
+              _buildDetailRow(
+                Icons.calendar_today,
+                'Date',
+                '${event.date.day}/${event.date.month}/${event.date.year}',
+              ),
+              _buildDetailRow(
+                Icons.access_time,
+                'Time',
+                '${formatTime(event.startTime)} - ${formatTime(event.endTime)}',
+              ),
+              _buildDetailRow(
+                Icons.schedule,
+                'Late Cutoff',
+                formatTime(event.lateCutoff),
+              ),
               if (hasAttendance) ...[
                 const Divider(height: 24),
                 const Text(
@@ -374,7 +415,10 @@ class StudentEvents extends StatelessWidget {
                   style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
                 ),
                 const SizedBox(height: 8),
-                _buildAttendanceStatus(attendance!.status, attendance.timestamp),
+                _buildAttendanceStatus(
+                  attendance!.status,
+                  attendance.timestamp,
+                ),
               ],
             ],
           ),
@@ -403,10 +447,7 @@ class StudentEvents extends StatelessWidget {
               children: [
                 Text(
                   label,
-                  style: TextStyle(
-                    color: Colors.grey.shade600,
-                    fontSize: 12,
-                  ),
+                  style: TextStyle(color: Colors.grey.shade600, fontSize: 12),
                 ),
                 Text(
                   value,
