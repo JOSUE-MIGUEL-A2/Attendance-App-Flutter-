@@ -1,139 +1,53 @@
+// lib/main.dart
 import 'package:flutter/material.dart';
-import 'package:thesis_attendance/data/notifiers.dart';
-import 'package:thesis_attendance/views/pages/welcome.dart';
+import 'package:provider/provider.dart';
+import 'package:thesis_attendance/app.dart';
+import 'package:thesis_attendance/data/providers/settings_provider.dart';
+import 'package:thesis_attendance/data/providers/auth_provider.dart';
+import 'package:thesis_attendance/data/providers/event_provider.dart';
+import 'package:thesis_attendance/data/providers/attendance_provider.dart';
+import 'package:thesis_attendance/data/providers/notification_provider.dart';
+import 'package:thesis_attendance/data/providers/sanction_provider.dart';
 
-void main() {
-  initializeSampleData();
-  runApp(const MyApp());
-}
-
-class MyApp extends StatelessWidget {
-  const MyApp({super.key});
-
-  @override
-  Widget build(BuildContext context) {
-    return ValueListenableBuilder(
-      valueListenable: isDarkNotifier,
-      builder: (context, isDark, child) {
-        return ValueListenableBuilder(
-          valueListenable: appSettingsNotifier,
-          builder: (context, settings, child) {
-            return MaterialApp(
-              title: 'ISATU Attendance System',
-              debugShowCheckedModeBanner: false,
-              
-              theme: ThemeData(
-                colorScheme: ColorScheme.fromSeed(
-                  seedColor: Colors.blue,
-                  brightness: Brightness.light,
-                ),
-                useMaterial3: true,
-                textTheme: TextTheme(
-                  bodyLarge: TextStyle(
-                    fontSize: settings.fontSize,
-                    fontFamily: settings.fontFamily,
-                  ),
-                  bodyMedium: TextStyle(
-                    fontSize: settings.fontSize,
-                    fontFamily: settings.fontFamily,
-                  ),
-                  bodySmall: TextStyle(
-                    fontSize: settings.fontSize - 2,
-                    fontFamily: settings.fontFamily,
-                  ),
-                  headlineLarge: TextStyle(
-                    fontSize: settings.fontSize + 10,
-                    fontFamily: settings.fontFamily,
-                    fontWeight: FontWeight.bold,
-                  ),
-                  headlineMedium: TextStyle(
-                    fontSize: settings.fontSize + 6,
-                    fontFamily: settings.fontFamily,
-                    fontWeight: FontWeight.bold,
-                  ),
-                  headlineSmall: TextStyle(
-                    fontSize: settings.fontSize + 4,
-                    fontFamily: settings.fontFamily,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-                cardTheme: CardThemeData(
-                  elevation: 2,
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                ),
-                appBarTheme: AppBarTheme(
-                  elevation: 0,
-                  centerTitle: false,
-                  titleTextStyle: TextStyle(
-                    fontSize: settings.fontSize + 6,
-                    fontWeight: FontWeight.bold,
-                    fontFamily: settings.fontFamily,
-                  ),
-                ),
-              ),
-              
-              darkTheme: ThemeData(
-                colorScheme: ColorScheme.fromSeed(
-                  seedColor: Colors.blue,
-                  brightness: Brightness.dark,
-                ),
-                useMaterial3: true,
-                textTheme: TextTheme(
-                  bodyLarge: TextStyle(
-                    fontSize: settings.fontSize,
-                    fontFamily: settings.fontFamily,
-                  ),
-                  bodyMedium: TextStyle(
-                    fontSize: settings.fontSize,
-                    fontFamily: settings.fontFamily,
-                  ),
-                  bodySmall: TextStyle(
-                    fontSize: settings.fontSize - 2,
-                    fontFamily: settings.fontFamily,
-                  ),
-                  headlineLarge: TextStyle(
-                    fontSize: settings.fontSize + 10,
-                    fontFamily: settings.fontFamily,
-                    fontWeight: FontWeight.bold,
-                  ),
-                  headlineMedium: TextStyle(
-                    fontSize: settings.fontSize + 6,
-                    fontFamily: settings.fontFamily,
-                    fontWeight: FontWeight.bold,
-                  ),
-                  headlineSmall: TextStyle(
-                    fontSize: settings.fontSize + 4,
-                    fontFamily: settings.fontFamily,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-                cardTheme: CardThemeData(
-                  elevation: 2,
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                ),
-                appBarTheme: AppBarTheme(
-                  elevation: 0,
-                  centerTitle: false,
-                  titleTextStyle: TextStyle(
-                    fontSize: settings.fontSize + 6,
-                    fontWeight: FontWeight.bold,
-                    fontFamily: settings.fontFamily,
-                  ),
-                ),
-              ),
-              
-              themeMode: isDark ? ThemeMode.dark : ThemeMode.light,
-              
-              // Start at Welcome/Login screen
-              home: const Welcome(),
-            );
-          },
-        );
-      },
-    );
-  }
+void main() async {
+  // Ensure Flutter binding is initialized
+  WidgetsFlutterBinding.ensureInitialized();
+  
+  runApp(
+    // MultiProvider: Provides all app-wide state management
+    MultiProvider(
+      providers: [
+        // Settings Provider - Theme, font, language preferences
+        ChangeNotifierProvider(
+          create: (_) => AppSettingsProvider(),
+        ),
+        
+        // Auth Provider - User authentication and current user
+        ChangeNotifierProvider(
+          create: (_) => AuthProvider(),
+        ),
+        
+        // Event Provider - Manages events
+        ChangeNotifierProvider(
+          create: (_) => EventProvider(),
+        ),
+        
+        // Attendance Provider - Manages attendance records
+        ChangeNotifierProvider(
+          create: (_) => AttendanceProvider(),
+        ),
+        
+        // Notification Provider - Manages notifications
+        ChangeNotifierProvider(
+          create: (_) => NotificationProvider(),
+        ),
+        
+        // Sanction Provider - Manages sanctions
+        ChangeNotifierProvider(
+          create: (_) => SanctionProvider(),
+        ),
+      ],
+      child: const MyApp(),
+    ),
+  );
 }
