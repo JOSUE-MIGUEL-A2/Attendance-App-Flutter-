@@ -8,8 +8,7 @@ import 'package:thesis_attendance/views/pages/student/student_documents.dart';
 import 'package:thesis_attendance/views/pages/student/student_sanctions.dart';
 import 'package:thesis_attendance/views/pages/student/student_notifications.dart';
 import 'package:thesis_attendance/views/pages/student/student_profile.dart';
-import 'package:thesis_attendance/views/pages/settings.dart';
-import 'package:thesis_attendance/views/pages/welcome.dart';
+import 'package:thesis_attendance/views/welcome.dart';
 import 'package:thesis_attendance/views/widgets/lottie_nav_item.dart';
 
 class StudentWidgetTree extends StatelessWidget {
@@ -83,17 +82,7 @@ class StudentWidgetTree extends StatelessWidget {
                   isDarkNotifier.value = !isDarkNotifier.value;
                 },
               ),
-              IconButton(
-                icon: const Icon(Icons.settings),
-                onPressed: () {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (context) => const Settings(title: "Settings"),
-                    ),
-                  );
-                },
-              ),
+              
             ],
           ),
           drawer: _buildDrawer(context),

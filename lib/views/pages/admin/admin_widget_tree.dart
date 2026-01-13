@@ -6,8 +6,7 @@ import 'package:thesis_attendance/views/pages/admin/admin_monitoring.dart';
 import 'package:thesis_attendance/views/pages/admin/admin_approvals.dart';
 import 'package:thesis_attendance/views/pages/admin/admin_sanctions.dart';
 import 'package:thesis_attendance/views/pages/admin/admin_students.dart';
-import 'package:thesis_attendance/views/pages/settings.dart';
-import 'package:thesis_attendance/views/pages/welcome.dart';
+import 'package:thesis_attendance/views/welcome.dart';
 import 'package:thesis_attendance/views/widgets/lottie_nav_item.dart';
 
 class AdminWidgetTree extends StatelessWidget {
@@ -91,17 +90,7 @@ class AdminWidgetTree extends StatelessWidget {
                 icon: Icon(isDark ? Icons.dark_mode : Icons.light_mode),
                 onPressed: () => isDarkNotifier.value = !isDarkNotifier.value,
               ),
-              IconButton(
-                icon: const Icon(Icons.settings),
-                onPressed: () {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (context) => const Settings(title: "Settings"),
-                    ),
-                  );
-                },
-              ),
+
             ],
           ),
           drawer: _buildDrawer(context),

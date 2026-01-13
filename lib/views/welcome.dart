@@ -1,8 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:lottie/lottie.dart';
-import 'package:thesis_attendance/data/notifiers.dart';
-import 'package:thesis_attendance/views/pages/student/student_widget_tree.dart';
-import 'package:thesis_attendance/views/pages/admin/admin_widget_tree.dart';
 
 class Welcome extends StatefulWidget {
   const Welcome({super.key});
@@ -12,72 +9,28 @@ class Welcome extends StatefulWidget {
 }
 
 class _WelcomeState extends State<Welcome> {
-  bool isSignIn = true;
-  UserRole selectedRole = UserRole.student;
-  final TextEditingController emailController = TextEditingController();
+  // Controllers
+  final TextEditingController usernameController = TextEditingController();
   final TextEditingController passwordController = TextEditingController();
-  final TextEditingController nameController = TextEditingController();
-  final TextEditingController studentIdController = TextEditingController();
+  
+  // UI State
+  bool isSignIn = true;
+  String selectedRole = 'student'; // 'student' or 'admin'
   bool _obscurePassword = true;
 
   @override
   void dispose() {
-    emailController.dispose();
+    usernameController.dispose();
     passwordController.dispose();
-    nameController.dispose();
-    studentIdController.dispose();
     super.dispose();
   }
 
   void _handleAuth() {
-    if (emailController.text.isEmpty || passwordController.text.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Please fill in all fields'),
-          backgroundColor: Colors.red,
-        ),
-      );
-      return;
-    }
-
-    if (!isSignIn && nameController.text.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Please enter your name'),
-          backgroundColor: Colors.red,
-        ),
-      );
-      return;
-    }
-
-    currentUserNotifier.value = CurrentUser(
-      id: DateTime.now().millisecondsSinceEpoch.toString(),
-      name: nameController.text.isNotEmpty ? nameController.text : 'Test User',
-      email: emailController.text,
-      role: selectedRole,
-      section: selectedRole == UserRole.student ? 'Section A' : null,
-      studentId: selectedRole == UserRole.student
-          ? studentIdController.text
-          : null,
-    );
-
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(
-          isSignIn ? 'Welcome Tradeans!' : 'Account created successfully!',
-        ),
-        backgroundColor: Colors.green,
-      ),
-    );
-
-    Navigator.pushReplacement(
-      context,
-      MaterialPageRoute(
-        builder: (context) => selectedRole == UserRole.student
-            ? const StudentWidgetTree()
-            : const AdminWidgetTree(),
-      ),
-    );
+    // TODO: Add Firebase authentication logic later
+    print('Auth button pressed');
+    print('Username: ${usernameController.text}');
+    print('Role: $selectedRole');
+    print('Is Sign In: $isSignIn');
   }
 
   @override
@@ -91,6 +44,7 @@ class _WelcomeState extends State<Welcome> {
             children: [
               const SizedBox(height: 20),
 
+              // Lottie Animation
               Hero(
                 tag: 'logo',
                 child: Lottie.asset(
@@ -103,6 +57,7 @@ class _WelcomeState extends State<Welcome> {
 
               const SizedBox(height: 20),
 
+              // Title with stroke effect
               Stack(
                 alignment: Alignment.center,
                 children: [
@@ -118,7 +73,6 @@ class _WelcomeState extends State<Welcome> {
                     ),
                     textAlign: TextAlign.center,
                   ),
-
                   Text(
                     isSignIn ? 'Welcome Tradeans!' : 'Create Account',
                     style: TextStyle(
@@ -133,6 +87,7 @@ class _WelcomeState extends State<Welcome> {
 
               const SizedBox(height: 8),
 
+              // Subtitle
               Text(
                 isSignIn ? 'Sign in to continue' : 'Sign up to get started',
                 style: TextStyle(fontSize: 16, color: Colors.grey.shade600),
@@ -141,6 +96,7 @@ class _WelcomeState extends State<Welcome> {
 
               const SizedBox(height: 30),
 
+              // Role Selector (Student/Admin)
               Container(
                 padding: const EdgeInsets.all(4),
                 decoration: BoxDecoration(
@@ -151,12 +107,11 @@ class _WelcomeState extends State<Welcome> {
                   children: [
                     Expanded(
                       child: GestureDetector(
-                        onTap: () =>
-                            setState(() => selectedRole = UserRole.student),
+                        onTap: () => setState(() => selectedRole = 'student'),
                         child: Container(
                           padding: const EdgeInsets.symmetric(vertical: 12),
                           decoration: BoxDecoration(
-                            color: selectedRole == UserRole.student
+                            color: selectedRole == 'student'
                                 ? Colors.blue.shade700
                                 : Colors.transparent,
                             borderRadius: BorderRadius.circular(10),
@@ -166,7 +121,7 @@ class _WelcomeState extends State<Welcome> {
                             children: [
                               Icon(
                                 Icons.school,
-                                color: selectedRole == UserRole.student
+                                color: selectedRole == 'student'
                                     ? Colors.white
                                     : Colors.grey.shade700,
                                 size: 20,
@@ -175,7 +130,7 @@ class _WelcomeState extends State<Welcome> {
                               Text(
                                 'Student',
                                 style: TextStyle(
-                                  color: selectedRole == UserRole.student
+                                  color: selectedRole == 'student'
                                       ? Colors.white
                                       : Colors.grey.shade700,
                                   fontWeight: FontWeight.bold,
@@ -188,12 +143,11 @@ class _WelcomeState extends State<Welcome> {
                     ),
                     Expanded(
                       child: GestureDetector(
-                        onTap: () =>
-                            setState(() => selectedRole = UserRole.admin),
+                        onTap: () => setState(() => selectedRole = 'admin'),
                         child: Container(
                           padding: const EdgeInsets.symmetric(vertical: 12),
                           decoration: BoxDecoration(
-                            color: selectedRole == UserRole.admin
+                            color: selectedRole == 'admin'
                                 ? Colors.blue.shade700
                                 : Colors.transparent,
                             borderRadius: BorderRadius.circular(10),
@@ -203,7 +157,7 @@ class _WelcomeState extends State<Welcome> {
                             children: [
                               Icon(
                                 Icons.admin_panel_settings,
-                                color: selectedRole == UserRole.admin
+                                color: selectedRole == 'admin'
                                     ? Colors.white
                                     : Colors.grey.shade700,
                                 size: 20,
@@ -212,7 +166,7 @@ class _WelcomeState extends State<Welcome> {
                               Text(
                                 'Admin',
                                 style: TextStyle(
-                                  color: selectedRole == UserRole.admin
+                                  color: selectedRole == 'admin'
                                       ? Colors.white
                                       : Colors.grey.shade700,
                                   fontWeight: FontWeight.bold,
@@ -229,40 +183,13 @@ class _WelcomeState extends State<Welcome> {
 
               const SizedBox(height: 24),
 
-              if (!isSignIn) ...[
-                TextField(
-                  controller: nameController,
-                  decoration: InputDecoration(
-                    labelText: 'Full Name',
-                    prefixIcon: const Icon(Icons.person),
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                  ),
-                ),
-                const SizedBox(height: 16),
-
-                if (selectedRole == UserRole.student) ...[
-                  TextField(
-                    controller: studentIdController,
-                    decoration: InputDecoration(
-                      labelText: 'Student ID',
-                      prefixIcon: const Icon(Icons.badge),
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                    ),
-                  ),
-                  const SizedBox(height: 16),
-                ],
-              ],
-
+              // Username Field
               TextField(
-                controller: emailController,
-                keyboardType: TextInputType.emailAddress,
+                controller: usernameController,
                 decoration: InputDecoration(
-                  labelText: 'Email',
-                  prefixIcon: const Icon(Icons.email),
+                  labelText: 'Username',
+                  hintText: 'Enter your username',
+                  prefixIcon: const Icon(Icons.person),
                   border: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(12),
                   ),
@@ -271,11 +198,13 @@ class _WelcomeState extends State<Welcome> {
 
               const SizedBox(height: 16),
 
+              // Password Field
               TextField(
                 controller: passwordController,
                 obscureText: _obscurePassword,
                 decoration: InputDecoration(
                   labelText: 'Password',
+                  hintText: 'Enter your password',
                   prefixIcon: const Icon(Icons.lock),
                   suffixIcon: IconButton(
                     icon: Icon(
@@ -294,6 +223,7 @@ class _WelcomeState extends State<Welcome> {
 
               const SizedBox(height: 24),
 
+              // Sign In/Up Button
               SizedBox(
                 height: 50,
                 child: ElevatedButton(
@@ -317,6 +247,7 @@ class _WelcomeState extends State<Welcome> {
 
               const SizedBox(height: 16),
 
+              // Toggle Sign In/Up
               Row(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
@@ -336,6 +267,35 @@ class _WelcomeState extends State<Welcome> {
                     ),
                   ),
                 ],
+              ),
+
+              const SizedBox(height: 16),
+
+              // Role info
+              Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: Colors.blue.shade50,
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(color: Colors.blue.shade200),
+                ),
+                child: Row(
+                  children: [
+                    Icon(Icons.info_outline, color: Colors.blue.shade700, size: 20),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        selectedRole == 'student'
+                            ? 'Students can mark attendance and view records'
+                            : 'Admins can manage events and approvals',
+                        style: TextStyle(
+                          color: Colors.blue.shade700,
+                          fontSize: 12,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
               ),
             ],
           ),
