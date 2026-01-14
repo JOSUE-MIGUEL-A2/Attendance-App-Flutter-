@@ -1,71 +1,29 @@
 import 'package:flutter/material.dart';
-import 'package:thesis_attendance/data/notifiers.dart';
 
 class StudentHome extends StatelessWidget {
   const StudentHome({super.key});
 
-  void _markAttendance(BuildContext context, AttendanceEvent event) {
-    final now = DateTime.now();
-    final lateTime = DateTime(
-      event.date.year,
-      event.date.month,
-      event.date.day,
-      event.lateCutoff.hour,
-      event.lateCutoff.minute,
-    );
-
-    AttendanceStatus status;
-    if (now.isBefore(lateTime)) {
-      status = AttendanceStatus.present;
-    } else {
-      status = AttendanceStatus.late;
-    }
-
-    final user = currentUserNotifier.value!;
-    final newRecord = AttendanceRecord(
-      id: DateTime.now().millisecondsSinceEpoch.toString(),
-      studentId: user.id,
-      studentName: user.name,
-      eventId: event.id,
-      status: status,
-      timestamp: now,
-      canSubmitDocument: status == AttendanceStatus.late,
-    );
-
-    attendanceRecordsNotifier.value = [
-      ...attendanceRecordsNotifier.value,
-      newRecord,
-    ];
-
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(
-          status == AttendanceStatus.present
-              ? 'Attendance marked: Present'
-              : 'Attendance marked: Late',
-        ),
-        backgroundColor: status == AttendanceStatus.present
-            ? Colors.green
-            : Colors.orange,
-      ),
-    );
-  }
-
   @override
   Widget build(BuildContext context) {
-    final user = currentUserNotifier.value!;
-    
     return SingleChildScrollView(
       padding: const EdgeInsets.all(16),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
+          // Welcome Card
           Card(
             elevation: 4,
             child: Container(
               padding: const EdgeInsets.all(20),
               decoration: BoxDecoration(
-                color: Colors.amber,
+                gradient: LinearGradient(
+                  colors: [
+                    Theme.of(context).colorScheme.primary,
+                    Theme.of(context).colorScheme.primary.withOpacity(0.7),
+                  ],
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                ),
                 borderRadius: BorderRadius.circular(12),
               ),
               child: Row(
@@ -74,11 +32,11 @@ class StudentHome extends StatelessWidget {
                     radius: 30,
                     backgroundColor: Colors.white,
                     child: Text(
-                      user.name[0].toUpperCase(),
+                      'J', // Will be dynamic later
                       style: TextStyle(
                         fontSize: 28,
                         fontWeight: FontWeight.bold,
-                        color: Colors.blue.shade700,
+                        color: Theme.of(context).colorScheme.primary,
                       ),
                     ),
                   ),
@@ -87,25 +45,25 @@ class StudentHome extends StatelessWidget {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        const Text(
+                        Text(
                           'Welcome Back!',
                           style: TextStyle(
-                            color: Colors.white70,
+                            color: Colors.white.withOpacity(0.9),
                             fontSize: 14,
                           ),
                         ),
-                        Text(
-                          user.name,
-                          style: const TextStyle(
+                        const Text(
+                          'Juan Dela Cruz',
+                          style: TextStyle(
                             color: Colors.white,
                             fontSize: 20,
                             fontWeight: FontWeight.bold,
                           ),
                         ),
                         Text(
-                          'ID: ${user.studentId}',
-                          style: const TextStyle(
-                            color: Colors.white70,
+                          'ID: 2024-12345',
+                          style: TextStyle(
+                            color: Colors.white.withOpacity(0.8),
                             fontSize: 12,
                           ),
                         ),
@@ -123,38 +81,20 @@ class StudentHome extends StatelessWidget {
           Row(
             children: [
               Expanded(
-                child: ValueListenableBuilder(
-                  valueListenable: attendanceRecordsNotifier,
-                  builder: (context, records, child) {
-                    final userRecords = records.where((r) => r.studentId == user.id).toList();
-                    final presentCount = userRecords.where((r) => r.status == AttendanceStatus.present).length;
-                    final percentage = userRecords.isEmpty ? 0 : (presentCount / userRecords.length * 100).round();
-                    
-                    return _StatCard(
-                      title: 'Attendance',
-                      value: '$percentage%',
-                      icon: Icons.check_circle,
-                      color: Colors.green,
-                    );
-                  },
+                child: _StatCard(
+                  title: 'Attendance',
+                  value: '95%',
+                  icon: Icons.check_circle,
+                  color: Colors.green,
                 ),
               ),
               const SizedBox(width: 12),
               Expanded(
-                child: ValueListenableBuilder(
-                  valueListenable: sanctionsNotifier,
-                  builder: (context, sanctions, child) {
-                    final userSanctions = sanctions.where(
-                      (s) => s.studentId == user.id && s.status == 'active'
-                    ).length;
-                    
-                    return _StatCard(
-                      title: 'Sanctions',
-                      value: '$userSanctions',
-                      icon: Icons.warning,
-                      color: userSanctions > 0 ? Colors.red : Colors.grey,
-                    );
-                  },
+                child: _StatCard(
+                  title: 'Sanctions',
+                  value: '0',
+                  icon: Icons.warning,
+                  color: Colors.grey,
                 ),
               ),
             ],
@@ -162,181 +102,72 @@ class StudentHome extends StatelessWidget {
 
           const SizedBox(height: 24),
 
-          // Today's Events - Check-In
-          const Text(
-            'Today\'s Events - Check In',
-            style: TextStyle(
-              fontSize: 18,
-              fontWeight: FontWeight.bold,
-            ),
+          // Today's Events Section
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(
+                "Today's Events - Check In",
+                style: Theme.of(context).textTheme.titleLarge,
+              ),
+              TextButton.icon(
+                onPressed: () {
+                  // TODO: Navigate to events page
+                },
+                icon: const Icon(Icons.arrow_forward, size: 16),
+                label: const Text('View All'),
+              ),
+            ],
           ),
+
           const SizedBox(height: 12),
 
-          ValueListenableBuilder(
-            valueListenable: eventsNotifier,
-            builder: (context, events, child) {
-              final todayEvents = events.where((e) => e.isToday && e.isActive).toList();
-              
-              if (todayEvents.isEmpty) {
-                return Card(
-                  child: Padding(
-                    padding: const EdgeInsets.all(32),
-                    child: Center(
-                      child: Column(
-                        children: [
-                          Icon(Icons.event_busy, size: 48, color: Colors.grey.shade400),
-                          const SizedBox(height: 8),
-                          Text(
-                            'No events today',
-                            style: TextStyle(color: Colors.grey.shade600),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
-                );
-              }
+          // Flag Ceremony Card
+          _TodayEventCard(
+            title: 'Flag Ceremony',
+            description: 'Daily morning assembly for all ISATU students',
+            startTime: '7:00 AM',
+            endTime: '8:00 AM',
+            lateCutoff: '7:45 AM',
+            isCheckedIn: false,
+          ),
 
-              return Column(
-                children: todayEvents.map((event) {
-                  // Check if already checked in
-                  final hasCheckedIn = attendanceRecordsNotifier.value.any(
-                    (r) => r.studentId == user.id && r.eventId == event.id
-                  );
+          const SizedBox(height: 12),
 
-                  return Card(
-                    margin: const EdgeInsets.only(bottom: 12),
-                    child: Padding(
-                      padding: const EdgeInsets.all(16),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Row(
-                            children: [
-                              Container(
-                                padding: const EdgeInsets.all(8),
-                                decoration: BoxDecoration(
-                                  color: Colors.blue.shade100,
-                                  borderRadius: BorderRadius.circular(8),
-                                ),
-                                child: Icon(Icons.event, color: Colors.blue.shade700),
-                              ),
-                              const SizedBox(width: 12),
-                              Expanded(
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Text(
-                                      event.title,
-                                      style: const TextStyle(
-                                        fontSize: 16,
-                                        fontWeight: FontWeight.bold,
-                                      ),
-                                    ),
-                                    Text(
-                                      '${formatTime(event.startTime)} - ${formatTime(event.endTime)}',
-                                      style: TextStyle(
-                                        color: Colors.grey.shade600,
-                                        fontSize: 12,
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              ),
-                            ],
-                          ),
-                          const SizedBox(height: 12),
-                          Text(
-                            event.description,
-                            style: TextStyle(color: Colors.grey.shade700),
-                          ),
-                          const Divider(height: 24),
-                          if (!hasCheckedIn)
-                            SizedBox(
-                              width: double.infinity,
-                              child: ElevatedButton.icon(
-                                onPressed: () => _markAttendance(context, event),
-                                icon: const Icon(Icons.check_circle),
-                                label: const Text('CHECK IN NOW'),
-                                style: ElevatedButton.styleFrom(
-                                  backgroundColor: Colors.green,
-                                  foregroundColor: Colors.white,
-                                  padding: const EdgeInsets.symmetric(vertical: 12),
-                                ),
-                              ),
-                            )
-                          else
-                            Container(
-                              padding: const EdgeInsets.all(12),
-                              decoration: BoxDecoration(
-                                color: Colors.green.shade50,
-                                borderRadius: BorderRadius.circular(8),
-                                border: Border.all(color: Colors.green),
-                              ),
-                              child: Row(
-                                mainAxisAlignment: MainAxisAlignment.center,
-                                children: [
-                                  Icon(Icons.check_circle, color: Colors.green, size: 20),
-                                  const SizedBox(width: 8),
-                                  const Text(
-                                    'Already Checked In',
-                                    style: TextStyle(
-                                      color: Colors.green,
-                                      fontWeight: FontWeight.bold,
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ),
-                        ],
-                      ),
-                    ),
-                  );
-                }).toList(),
-              );
-            },
+          // Another Event Example
+          _TodayEventCard(
+            title: 'Seminar',
+            description: 'Kay maSeminaryo ta',
+            startTime: '9:00 AM',
+            endTime: '10:30 AM',
+            lateCutoff: '9:10 AM',
+            isCheckedIn: true,
           ),
 
           const SizedBox(height: 24),
 
-          // Upcoming Events
-          const Text(
-            'Upcoming Events',
-            style: TextStyle(
-              fontSize: 18,
-              fontWeight: FontWeight.bold,
-            ),
+          // This Week's Events
+          Text(
+            'This Week\'s Events',
+            style: Theme.of(context).textTheme.titleLarge,
           ),
+
           const SizedBox(height: 12),
 
-          ValueListenableBuilder(
-            valueListenable: eventsNotifier,
-            builder: (context, events, child) {
-              final upcomingEvents = events.where((e) => e.isUpcoming && e.isActive).take(3).toList();
-              
-              if (upcomingEvents.isEmpty) {
-                return const SizedBox.shrink();
-              }
+          _WeekEventCard(
+            title: 'School Event',
+            date: 'Friday, Jan 17',
+            time: '2:00 PM - 4:00 PM',
+            daysUntil: 3,
+          ),
 
-              return Column(
-                children: upcomingEvents.map((event) {
-                  return Card(
-                    margin: const EdgeInsets.only(bottom: 8),
-                    child: ListTile(
-                      leading: CircleAvatar(
-                        backgroundColor: Colors.blue.shade100,
-                        child: Icon(Icons.upcoming, color: Colors.blue.shade700),
-                      ),
-                      title: Text(event.title),
-                      subtitle: Text(
-                        '${event.date.day}/${event.date.month}/${event.date.year} at ${formatTime(event.startTime)}',
-                      ),
-                      trailing: const Icon(Icons.arrow_forward_ios, size: 16),
-                    ),
-                  );
-                }).toList(),
-              );
-            },
+          const SizedBox(height: 12),
+
+          _WeekEventCard(
+            title: 'Student Assembly',
+            date: 'Thursday, Jan 16',
+            time: '10:00 AM - 11:00 AM',
+            daysUntil: 2,
           ),
         ],
       ),
@@ -344,6 +175,7 @@ class StudentHome extends StatelessWidget {
   }
 }
 
+// Stat Card Widget
 class _StatCard extends StatelessWidget {
   final String title;
   final String value;
@@ -383,6 +215,199 @@ class _StatCard extends StatelessWidget {
               ),
             ),
           ],
+        ),
+      ),
+    );
+  }
+}
+
+// Today Event Card Widget
+class _TodayEventCard extends StatelessWidget {
+  final String title;
+  final String description;
+  final String startTime;
+  final String endTime;
+  final String lateCutoff;
+  final bool isCheckedIn;
+
+  const _TodayEventCard({
+    required this.title,
+    required this.description,
+    required this.startTime,
+    required this.endTime,
+    required this.lateCutoff,
+    required this.isCheckedIn,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Card(
+      margin: const EdgeInsets.only(bottom: 12),
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(8),
+                  decoration: BoxDecoration(
+                    color: Theme.of(context).colorScheme.primary.withOpacity(0.1),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Icon(
+                    Icons.event,
+                    color: Theme.of(context).colorScheme.primary,
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        title,
+                        style: const TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      Text(
+                        '$startTime - $endTime',
+                        style: TextStyle(
+                          color: Colors.grey.shade600,
+                          fontSize: 12,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 12),
+            Text(
+              description,
+              style: TextStyle(color: Colors.grey.shade700),
+            ),
+            const SizedBox(height: 8),
+            Row(
+              children: [
+                Icon(Icons.schedule, size: 16, color: Colors.orange.shade700),
+                const SizedBox(width: 4),
+                Text(
+                  'Late after $lateCutoff',
+                  style: TextStyle(
+                    color: Colors.orange.shade700,
+                    fontSize: 12,
+                  ),
+                ),
+              ],
+            ),
+            const Divider(height: 24),
+            if (!isCheckedIn)
+              SizedBox(
+                width: double.infinity,
+                child: ElevatedButton.icon(
+                  onPressed: () {
+                    // TODO: Mark attendance
+                    print('Check in to $title');
+                  },
+                  icon: const Icon(Icons.check_circle),
+                  label: const Text('CHECK IN NOW'),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.green,
+                    foregroundColor: Colors.white,
+                    padding: const EdgeInsets.symmetric(vertical: 12),
+                  ),
+                ),
+              )
+            else
+              Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: Colors.green.shade50,
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(color: Colors.green),
+                ),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Icon(Icons.check_circle, color: Colors.green, size: 20),
+                    const SizedBox(width: 8),
+                    const Text(
+                      'Already Checked In',
+                      style: TextStyle(
+                        color: Colors.green,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+// Week Event Card Widget
+class _WeekEventCard extends StatelessWidget {
+  final String title;
+  final String date;
+  final String time;
+  final int daysUntil;
+
+  const _WeekEventCard({
+    required this.title,
+    required this.date,
+    required this.time,
+    required this.daysUntil,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Card(
+      child: ListTile(
+        leading: CircleAvatar(
+          backgroundColor: Theme.of(context).colorScheme.secondary.withOpacity(0.2),
+          child: Icon(
+            Icons.upcoming,
+            color: Theme.of(context).colorScheme.secondary,
+          ),
+        ),
+        title: Text(
+          title,
+          style: const TextStyle(fontWeight: FontWeight.bold),
+        ),
+        subtitle: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(date),
+            Text(
+              time,
+              style: TextStyle(
+                color: Colors.grey.shade600,
+                fontSize: 12,
+              ),
+            ),
+          ],
+        ),
+        trailing: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+          decoration: BoxDecoration(
+            color: Theme.of(context).colorScheme.primary.withOpacity(0.1),
+            borderRadius: BorderRadius.circular(20),
+          ),
+          child: Text(
+            'In $daysUntil days',
+            style: TextStyle(
+              color: Theme.of(context).colorScheme.primary,
+              fontWeight: FontWeight.bold,
+              fontSize: 12,
+            ),
+          ),
         ),
       ),
     );

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:lottie/lottie.dart';
+import 'package:thesis_attendance/views/pages/student/student_dashboard.dart';
 
 class Welcome extends StatefulWidget {
   const Welcome({super.key});
@@ -26,11 +27,43 @@ class _WelcomeState extends State<Welcome> {
   }
 
   void _handleAuth() {
-    // TODO: Add Firebase authentication logic later
+    // Basic validation
+    if (usernameController.text.isEmpty || passwordController.text.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Please fill in all fields'),
+          backgroundColor: Colors.red,
+        ),
+      );
+      return;
+    }
+
+    // TODO: Add Firebase authentication later
+    // For now, simple role-based navigation
+    
     print('Auth button pressed');
     print('Username: ${usernameController.text}');
     print('Role: $selectedRole');
     print('Is Sign In: $isSignIn');
+
+    // Navigate based on role
+    if (selectedRole == 'student') {
+      // Navigate to Student Home
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(
+          builder: (context) => const StudentDashboard(),
+        ),
+      );
+    } else {
+      // Admin - will implement later
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Admin portal - Coming soon!'),
+          backgroundColor: Colors.blue,
+        ),
+      );
+    }
   }
 
   @override

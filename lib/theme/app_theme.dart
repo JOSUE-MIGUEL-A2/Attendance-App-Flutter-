@@ -1,24 +1,19 @@
-// ==================== theme/app_theme.dart ====================
 import 'package:flutter/material.dart';
 
 class AppTheme {
-  // Color Schemes
   static const Map<String, ColorScheme> colorSchemes = {
     'ISAT-U': ColorScheme(
       brightness: Brightness.light,
-      primary: Color(0xFF0D47A1), // Deep Blue (Dominant)
+      primary: Color(0xFF0D47A1),
       onPrimary: Colors.white,
-      secondary: Color(0xFFFFD700), // Gold
+      secondary: Color(0xFFFFD700),
       onSecondary: Color(0xFF212121),
-      tertiary: Color(0xFF1565C0), // Lighter Blue
+      tertiary: Color(0xFF1565C0),
       onTertiary: Colors.white,
       error: Color(0xFFD32F2F),
       onError: Colors.white,
-      background: Color(0xFFF8F9FA),
-      onBackground: Color(0xFF212121),
       surface: Colors.white,
       onSurface: Color(0xFF212121),
-      surfaceVariant: Color(0xFFE3F2FD), // Light blue tint
       onSurfaceVariant: Color(0xFF0D47A1),
     ),
     'blue': ColorScheme(
@@ -29,8 +24,6 @@ class AppTheme {
       onSecondary: Colors.white,
       error: Color(0xFFD32F2F),
       onError: Colors.white,
-      background: Color(0xFFF5F5F5),
-      onBackground: Color(0xFF212121),
       surface: Colors.white,
       onSurface: Color(0xFF212121),
     ),
@@ -42,8 +35,6 @@ class AppTheme {
       onSecondary: Colors.white,
       error: Color(0xFFD32F2F),
       onError: Colors.white,
-      background: Color(0xFFF5F5F5),
-      onBackground: Color(0xFF212121),
       surface: Colors.white,
       onSurface: Color(0xFF212121),
     ),
@@ -55,8 +46,6 @@ class AppTheme {
       onSecondary: Colors.white,
       error: Color(0xFFD32F2F),
       onError: Colors.white,
-      background: Color(0xFFF5F5F5),
-      onBackground: Color(0xFF212121),
       surface: Colors.white,
       onSurface: Color(0xFF212121),
     ),
@@ -68,8 +57,6 @@ class AppTheme {
       onSecondary: Colors.white,
       error: Color(0xFFD32F2F),
       onError: Colors.white,
-      background: Color(0xFFF5F5F5),
-      onBackground: Color(0xFF212121),
       surface: Colors.white,
       onSurface: Color(0xFF212121),
     ),
@@ -81,8 +68,6 @@ class AppTheme {
       onSecondary: Colors.white,
       error: Color(0xFFD32F2F),
       onError: Colors.white,
-      background: Color(0xFFF5F5F5),
-      onBackground: Color(0xFF212121),
       surface: Colors.white,
       onSurface: Color(0xFF212121),
     ),
@@ -100,11 +85,8 @@ class AppTheme {
       onTertiary: Color(0xFF212121),
       error: Color(0xFFEF5350),
       onError: Color(0xFF212121),
-      background: Color(0xFF0A1929), // Dark blue-tinted background
-      onBackground: Color(0xFFE3F2FD),
       surface: Color(0xFF132F4C), // Dark blue surface
       onSurface: Color(0xFFE3F2FD),
-      surfaceVariant: Color(0xFF1A3A52), // Darker blue variant
       onSurfaceVariant: Color(0xFFFFD700),
     ),
     'blue': ColorScheme(
@@ -115,8 +97,6 @@ class AppTheme {
       onSecondary: Color(0xFF212121),
       error: Color(0xFFEF5350),
       onError: Color(0xFF212121),
-      background: Color(0xFF121212),
-      onBackground: Color(0xFFE0E0E0),
       surface: Color(0xFF1E1E1E),
       onSurface: Color(0xFFE0E0E0),
     ),
@@ -128,8 +108,6 @@ class AppTheme {
       onSecondary: Color(0xFF212121),
       error: Color(0xFFEF5350),
       onError: Color(0xFF212121),
-      background: Color(0xFF121212),
-      onBackground: Color(0xFFE0E0E0),
       surface: Color(0xFF1E1E1E),
       onSurface: Color(0xFFE0E0E0),
     ),
@@ -141,8 +119,6 @@ class AppTheme {
       onSecondary: Color(0xFF212121),
       error: Color(0xFFEF5350),
       onError: Color(0xFF212121),
-      background: Color(0xFF121212),
-      onBackground: Color(0xFFE0E0E0),
       surface: Color(0xFF1E1E1E),
       onSurface: Color(0xFFE0E0E0),
     ),
@@ -154,8 +130,6 @@ class AppTheme {
       onSecondary: Color(0xFF212121),
       error: Color(0xFFEF5350),
       onError: Color(0xFF212121),
-      background: Color(0xFF121212),
-      onBackground: Color(0xFFE0E0E0),
       surface: Color(0xFF1E1E1E),
       onSurface: Color(0xFFE0E0E0),
     ),
@@ -167,14 +141,11 @@ class AppTheme {
       onSecondary: Color(0xFF212121),
       error: Color(0xFFEF5350),
       onError: Color(0xFF212121),
-      background: Color(0xFF121212),
-      onBackground: Color(0xFFE0E0E0),
       surface: Color(0xFF1E1E1E),
       onSurface: Color(0xFFE0E0E0),
     ),
   };
 
-  // Font Families
   static const List<String> fontFamilies = [
     'Roboto',
     'Poppins',
@@ -198,40 +169,71 @@ class AppTheme {
       useMaterial3: true,
       colorScheme: colorScheme,
       fontFamily: fontFamily,
-      
+
       // Text Theme with custom font size
       textTheme: TextTheme(
-        displayLarge: TextStyle(fontSize: fontSize + 42, fontWeight: FontWeight.bold),
-        displayMedium: TextStyle(fontSize: fontSize + 36, fontWeight: FontWeight.bold),
-        displaySmall: TextStyle(fontSize: fontSize + 30, fontWeight: FontWeight.bold),
-        headlineLarge: TextStyle(fontSize: fontSize + 18, fontWeight: FontWeight.bold),
-        headlineMedium: TextStyle(fontSize: fontSize + 14, fontWeight: FontWeight.bold),
-        headlineSmall: TextStyle(fontSize: fontSize + 10, fontWeight: FontWeight.bold),
-        titleLarge: TextStyle(fontSize: fontSize + 8, fontWeight: FontWeight.w600),
-        titleMedium: TextStyle(fontSize: fontSize + 4, fontWeight: FontWeight.w600),
-        titleSmall: TextStyle(fontSize: fontSize + 2, fontWeight: FontWeight.w600),
+        displayLarge: TextStyle(
+          fontSize: fontSize + 42,
+          fontWeight: FontWeight.bold,
+        ),
+        displayMedium: TextStyle(
+          fontSize: fontSize + 36,
+          fontWeight: FontWeight.bold,
+        ),
+        displaySmall: TextStyle(
+          fontSize: fontSize + 30,
+          fontWeight: FontWeight.bold,
+        ),
+        headlineLarge: TextStyle(
+          fontSize: fontSize + 18,
+          fontWeight: FontWeight.bold,
+        ),
+        headlineMedium: TextStyle(
+          fontSize: fontSize + 14,
+          fontWeight: FontWeight.bold,
+        ),
+        headlineSmall: TextStyle(
+          fontSize: fontSize + 10,
+          fontWeight: FontWeight.bold,
+        ),
+        titleLarge: TextStyle(
+          fontSize: fontSize + 8,
+          fontWeight: FontWeight.w600,
+        ),
+        titleMedium: TextStyle(
+          fontSize: fontSize + 4,
+          fontWeight: FontWeight.w600,
+        ),
+        titleSmall: TextStyle(
+          fontSize: fontSize + 2,
+          fontWeight: FontWeight.w600,
+        ),
         bodyLarge: TextStyle(fontSize: fontSize + 2),
         bodyMedium: TextStyle(fontSize: fontSize),
         bodySmall: TextStyle(fontSize: fontSize - 2),
-        labelLarge: TextStyle(fontSize: fontSize + 2, fontWeight: FontWeight.w500),
+        labelLarge: TextStyle(
+          fontSize: fontSize + 2,
+          fontWeight: FontWeight.w500,
+        ),
         labelMedium: TextStyle(fontSize: fontSize, fontWeight: FontWeight.w500),
-        labelSmall: TextStyle(fontSize: fontSize - 2, fontWeight: FontWeight.w500),
+        labelSmall: TextStyle(
+          fontSize: fontSize - 2,
+          fontWeight: FontWeight.w500,
+        ),
       ),
 
       // AppBar Theme
       appBarTheme: AppBarTheme(
         backgroundColor: colorScheme.primary,
         foregroundColor: colorScheme.onPrimary,
-        elevation: 0,
+        elevation: 500,
         centerTitle: true,
       ),
 
       // Card Theme
       cardTheme: CardThemeData(
         elevation: 2,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(12),
-        ),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
       ),
 
       // Elevated Button Theme
@@ -251,12 +253,9 @@ class AppTheme {
         color: colorScheme.primary,
         size: 24,
       ),
-
       // Input Decoration Theme
       inputDecorationTheme: InputDecorationTheme(
-        border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12),
-        ),
+        border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
         filled: true,
         fillColor: colorScheme.surface,
       ),
