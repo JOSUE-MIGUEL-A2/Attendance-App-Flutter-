@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:lottie/lottie.dart';
 import 'package:thesis_attendance/views/pages/student/student_dashboard.dart';
+import 'package:thesis_attendance/views/pages/admin/admin_dashboard.dart';
 
 class Welcome extends StatefulWidget {
   const Welcome({super.key});
@@ -48,7 +49,7 @@ class _WelcomeState extends State<Welcome> {
 
     // Navigate based on role
     if (selectedRole == 'student') {
-      // Navigate to Student Home
+      // Navigate to Student Dashboard
       Navigator.pushReplacement(
         context,
         MaterialPageRoute(
@@ -56,11 +57,11 @@ class _WelcomeState extends State<Welcome> {
         ),
       );
     } else {
-      // Admin - will implement later
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Admin portal - Coming soon!'),
-          backgroundColor: Colors.blue,
+      // Navigate to Admin Dashboard
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(
+          builder: (context) => const AdminDashboard(),
         ),
       );
     }
@@ -320,7 +321,7 @@ class _WelcomeState extends State<Welcome> {
                       child: Text(
                         selectedRole == 'student'
                             ? 'Students can mark attendance and view records'
-                            : 'Admins can manage events and approvals',
+                            : 'Admins manage events, approvals, and student records',
                         style: TextStyle(
                           color: Colors.blue.shade700,
                           fontSize: 12,
