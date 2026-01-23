@@ -1,7 +1,9 @@
+// lib/views/pages/student/student_history.dart
 import 'package:flutter/material.dart';
-import 'package:provider/provider.dart';
-import 'package:thesis_attendance/services/data_provider.dart';
+import 'package:thesis_attendance/services/student_service.dart';
+import 'package:thesis_attendance/services/firebase_service.dart';
 import 'package:thesis_attendance/models/student_model.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 
 class StudentHistory extends StatefulWidget {
   const StudentHistory({super.key});
@@ -11,6 +13,7 @@ class StudentHistory extends StatefulWidget {
 }
 
 class _StudentHistoryState extends State<StudentHistory> {
+  final StudentService _studentService = StudentService();
   String _selectedMonth = 'All Time';
   final List<String> _months = [
     'All Time',
@@ -22,199 +25,242 @@ class _StudentHistoryState extends State<StudentHistory> {
 
   @override
   Widget build(BuildContext context) {
-    return Consumer<DataProvider>(
-      builder: (context, provider, child) {
-        final student = provider.currentStudent;
-        final allRecords = provider.getStudentAttendanceHistory(student?.studentId ?? '');
-        
-        // Filter by month if needed
-        List<AttendanceRecord> filteredRecords;
-        if (_selectedMonth == 'All Time') {
-          filteredRecords = allRecords;
-        } else {
-          // Parse month and year from selection
-          final parts = _selectedMonth.split(' ');
-          final monthName = parts[0];
-          final year = int.parse(parts[1]);
-          final monthIndex = [
-            'January', 'February', 'March', 'April', 'May', 'June',
-            'July', 'August', 'September', 'October', 'November', 'December'
-          ].indexOf(monthName) + 1;
-          
-          filteredRecords = allRecords.where((record) {
-            return record.eventDate.month == monthIndex && 
-                   record.eventDate.year == year;
-          }).toList();
+    final uid = FirebaseService.currentUserId;
+
+    if (uid == null) {
+      return const Center(child: Text('Not logged in'));
+    }
+
+    return StreamBuilder<Student?>(
+      stream: _studentService.getStudentProfile(uid),
+      builder: (context, studentSnapshot) {
+        if (!studentSnapshot.hasData) {
+          return const Center(child: CircularProgressIndicator());
         }
 
-        // Calculate filtered stats
-        final filteredPresent = filteredRecords.where((r) => r.status == 'present').length;
-        final filteredLate = filteredRecords.where((r) => r.status == 'late').length;
-        final filteredAbsent = filteredRecords.where((r) => r.status == 'absent').length;
-        final filteredTotal = filteredRecords.length;
+        final student = studentSnapshot.data!;
 
-        return SingleChildScrollView(
-          padding: const EdgeInsets.all(16),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              // Summary Cards
-              Row(
+        return StreamBuilder<List<AttendanceRecord>>(
+          stream: _getFilteredAttendance(student.studentId),
+          builder: (context, recordsSnapshot) {
+            if (recordsSnapshot.connectionState == ConnectionState.waiting) {
+              return const Center(child: CircularProgressIndicator());
+            }
+
+            final allRecords = recordsSnapshot.data ?? [];
+            
+            // Calculate stats
+            final filteredPresent = allRecords.where((r) => r.status == 'present').length;
+            final filteredLate = allRecords.where((r) => r.status == 'late').length;
+            final filteredAbsent = allRecords.where((r) => r.status == 'absent').length;
+            final filteredTotal = allRecords.length;
+
+            return SingleChildScrollView(
+              padding: const EdgeInsets.all(16),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Expanded(
-                    child: _SummaryCard(
-                      title: 'Total Events',
-                      value: filteredTotal.toString(),
-                      icon: Icons.event,
-                      color: Colors.blue,
-                      onTap: () => _showFilteredRecords(context, filteredRecords, 'All Events'),
-                    ),
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: _SummaryCard(
-                      title: 'Attended',
-                      value: (filteredPresent + filteredLate).toString(),
-                      icon: Icons.check_circle,
-                      color: Colors.green,
-                      onTap: () => _showFilteredRecords(
-                        context,
-                        filteredRecords.where((r) => r.status == 'present' || r.status == 'late').toList(),
-                        'Attended Events',
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-
-              const SizedBox(height: 12),
-
-              Row(
-                children: [
-                  Expanded(
-                    child: _SummaryCard(
-                      title: 'Late',
-                      value: filteredLate.toString(),
-                      icon: Icons.schedule,
-                      color: Colors.orange,
-                      onTap: () => _showFilteredRecords(
-                        context,
-                        filteredRecords.where((r) => r.status == 'late').toList(),
-                        'Late Arrivals',
-                      ),
-                    ),
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: _SummaryCard(
-                      title: 'Absent',
-                      value: filteredAbsent.toString(),
-                      icon: Icons.cancel,
-                      color: Colors.red,
-                      onTap: () => _showFilteredRecords(
-                        context,
-                        filteredRecords.where((r) => r.status == 'absent').toList(),
-                        'Absences',
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-
-              const SizedBox(height: 24),
-
-              // Month Selector
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Text(
-                    'Attendance History',
-                    style: Theme.of(context).textTheme.titleLarge,
-                  ),
-                  Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
-                    decoration: BoxDecoration(
-                      border: Border.all(color: Colors.grey.shade300),
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                    child: DropdownButton<String>(
-                      value: _selectedMonth,
-                      underline: const SizedBox(),
-                      isDense: true,
-                      items: _months
-                          .map((month) => DropdownMenuItem(
-                                value: month,
-                                child: Text(
-                                  month,
-                                  style: const TextStyle(fontSize: 12),
-                                ),
-                              ))
-                          .toList(),
-                      onChanged: (value) {
-                        if (value != null) {
-                          setState(() {
-                            _selectedMonth = value;
-                          });
-                        }
-                      },
-                    ),
-                  ),
-                ],
-              ),
-
-              const SizedBox(height: 16),
-
-              // History List
-              if (filteredRecords.isEmpty)
-                Center(
-                  child: Padding(
-                    padding: const EdgeInsets.all(40),
-                    child: Column(
-                      children: [
-                        Icon(
-                          Icons.history,
-                          size: 64,
-                          color: Colors.grey.shade400,
+                  // Summary Cards
+                  Row(
+                    children: [
+                      Expanded(
+                        child: _SummaryCard(
+                          title: 'Total Events',
+                          value: filteredTotal.toString(),
+                          icon: Icons.event,
+                          color: Colors.blue,
+                          onTap: () => _showFilteredRecords(allRecords, 'All Events'),
                         ),
-                        const SizedBox(height: 16),
-                        Text(
-                          'No attendance records found',
-                          style: TextStyle(
-                            fontSize: 16,
-                            color: Colors.grey.shade600,
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: _SummaryCard(
+                          title: 'Attended',
+                          value: (filteredPresent + filteredLate).toString(),
+                          icon: Icons.check_circle,
+                          color: Colors.green,
+                          onTap: () => _showFilteredRecords(
+                            allRecords.where((r) => r.status == 'present' || r.status == 'late').toList(),
+                            'Attended Events',
                           ),
                         ),
-                      ],
+                      ),
+                    ],
+                  ),
+
+                  const SizedBox(height: 12),
+
+                  Row(
+                    children: [
+                      Expanded(
+                        child: _SummaryCard(
+                          title: 'Late',
+                          value: filteredLate.toString(),
+                          icon: Icons.schedule,
+                          color: Colors.orange,
+                          onTap: () => _showFilteredRecords(
+                            allRecords.where((r) => r.status == 'late').toList(),
+                            'Late Arrivals',
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: _SummaryCard(
+                          title: 'Absent',
+                          value: filteredAbsent.toString(),
+                          icon: Icons.cancel,
+                          color: Colors.red,
+                          onTap: () => _showFilteredRecords(
+                            allRecords.where((r) => r.status == 'absent').toList(),
+                            'Absences',
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+
+                  const SizedBox(height: 24),
+
+                  // Month Selector
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Text(
+                        'Attendance History',
+                        style: Theme.of(context).textTheme.titleLarge,
+                      ),
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+                        decoration: BoxDecoration(
+                          border: Border.all(color: Colors.grey.shade300),
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: DropdownButton<String>(
+                          value: _selectedMonth,
+                          underline: const SizedBox(),
+                          isDense: true,
+                          items: _months
+                              .map((month) => DropdownMenuItem(
+                                    value: month,
+                                    child: Text(
+                                      month,
+                                      style: const TextStyle(fontSize: 12),
+                                    ),
+                                  ))
+                              .toList(),
+                          onChanged: (value) {
+                            if (value != null) {
+                              setState(() {
+                                _selectedMonth = value;
+                              });
+                            }
+                          },
+                        ),
+                      ),
+                    ],
+                  ),
+
+                  const SizedBox(height: 16),
+
+                  // History List
+                  if (allRecords.isEmpty)
+                    Center(
+                      child: Padding(
+                        padding: const EdgeInsets.all(40),
+                        child: Column(
+                          children: [
+                            Icon(
+                              Icons.history,
+                              size: 64,
+                              color: Colors.grey.shade400,
+                            ),
+                            const SizedBox(height: 16),
+                            Text(
+                              'No attendance records found',
+                              style: TextStyle(
+                                fontSize: 16,
+                                color: Colors.grey.shade600,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    )
+                  else
+                    ...allRecords.map((record) => Padding(
+                      padding: const EdgeInsets.only(bottom: 12),
+                      child: _HistoryItem(
+                        record: record,
+                        onTap: () => _showRecordDetails(record),
+                      ),
+                    )),
+
+                  const SizedBox(height: 24),
+
+                  // Export Button
+                  Center(
+                    child: OutlinedButton.icon(
+                      onPressed: allRecords.isEmpty ? null : () => _handleExport(allRecords),
+                      icon: const Icon(Icons.download),
+                      label: Text('Export ${_selectedMonth} History'),
                     ),
                   ),
-                )
-              else
-                ...filteredRecords.map((record) => Padding(
-                  padding: const EdgeInsets.only(bottom: 12),
-                  child: _HistoryItem(
-                    record: record,
-                    onTap: () => _showRecordDetails(record),
-                  ),
-                )),
-
-              const SizedBox(height: 24),
-
-              // Export Button
-              Center(
-                child: OutlinedButton.icon(
-                  onPressed: () => _handleExport(filteredRecords),
-                  icon: const Icon(Icons.download),
-                  label: Text('Export ${_selectedMonth} History'),
-                ),
+                ],
               ),
-            ],
-          ),
+            );
+          },
         );
       },
     );
   }
 
-  void _showFilteredRecords(BuildContext context, List<AttendanceRecord> records, String title) {
+  Stream<List<AttendanceRecord>> _getFilteredAttendance(String studentId) {
+    Query query = FirebaseService.firestore
+        .collection('attendance')
+        .where('studentId', isEqualTo: studentId);
+
+    if (_selectedMonth != 'All Time') {
+      final parts = _selectedMonth.split(' ');
+      if (parts.length == 2) {
+        final monthNames = ['January', 'February', 'March', 'April', 'May', 'June',
+                           'July', 'August', 'September', 'October', 'November', 'December'];
+        final monthIndex = monthNames.indexOf(parts[0]) + 1;
+        final year = int.parse(parts[1]);
+        
+        final startDate = DateTime(year, monthIndex, 1);
+        final endDate = DateTime(year, monthIndex + 1, 0, 23, 59, 59);
+        
+        query = query
+            .where('eventDate', isGreaterThanOrEqualTo: Timestamp.fromDate(startDate))
+            .where('eventDate', isLessThanOrEqualTo: Timestamp.fromDate(endDate));
+      }
+    }
+
+    return query
+        .orderBy('eventDate', descending: true)
+        .snapshots()
+        .map((snapshot) {
+      return snapshot.docs.map((doc) {
+        final data = doc.data() as Map<String, dynamic>;
+        return AttendanceRecord(
+          id: doc.id,
+          studentId: data['studentId'] ?? '',
+          eventId: data['eventId'] ?? '',
+          eventName: data['eventName'] ?? '',
+          eventDate: (data['eventDate'] as Timestamp).toDate(),
+          eventTime: data['eventTime'] ?? '',
+          status: data['status'] ?? '',
+          checkInTime: data['checkInTime'] != null
+              ? (data['checkInTime'] as Timestamp).toDate()
+              : null,
+          remarks: data['remarks'],
+        );
+      }).toList();
+    });
+  }
+
+  void _showFilteredRecords(List<AttendanceRecord> records, String title) {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
@@ -324,16 +370,6 @@ class _StudentHistoryState extends State<StudentHistory> {
   }
 
   void _handleExport(List<AttendanceRecord> records) {
-    if (records.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('No records to export'),
-          behavior: SnackBarBehavior.floating,
-        ),
-      );
-      return;
-    }
-
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
@@ -350,7 +386,7 @@ class _StudentHistoryState extends State<StudentHistory> {
             const SizedBox(height: 8),
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-              children: [
+              children: const [
                 _ExportOption(Icons.picture_as_pdf, 'PDF'),
                 _ExportOption(Icons.table_chart, 'Excel'),
                 _ExportOption(Icons.description, 'CSV'),
@@ -372,6 +408,7 @@ class _StudentHistoryState extends State<StudentHistory> {
                   behavior: SnackBarBehavior.floating,
                 ),
               );
+              // TODO: Implement actual export functionality
             },
             child: const Text('Export'),
           ),

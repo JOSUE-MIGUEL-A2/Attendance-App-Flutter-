@@ -1,3 +1,4 @@
+// lib/views/pages/student/student_dashboard.dart
 import 'package:flutter/material.dart';
 import 'package:thesis_attendance/views/pages/student/student_home.dart';
 import 'package:thesis_attendance/views/pages/student/student_events.dart';
@@ -8,6 +9,9 @@ import 'package:thesis_attendance/views/pages/student/student_sidebar/student_pr
 import 'package:thesis_attendance/views/pages/student/student_sidebar/student_sanctions.dart';
 import 'package:thesis_attendance/views/settings.dart';
 import 'package:thesis_attendance/views/welcome.dart';
+import 'package:thesis_attendance/services/auth_service.dart';
+import 'package:thesis_attendance/services/firebase_service.dart';
+import 'package:thesis_attendance/services/student_service.dart';
 
 class StudentDashboard extends StatefulWidget {
   const StudentDashboard({super.key});
@@ -17,6 +21,8 @@ class StudentDashboard extends StatefulWidget {
 }
 
 class _StudentDashboardState extends State<StudentDashboard> {
+  final AuthService _authService = AuthService();
+  final StudentService _studentService = StudentService();
   int _selectedIndex = 0;
 
   final List<Widget> _pages = [
@@ -28,61 +34,119 @@ class _StudentDashboardState extends State<StudentDashboard> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('Student Portal'),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.notifications),
-            onPressed: () {
-              _showNotifications();
+    final uid = FirebaseService.currentUserId;
+
+    if (uid == null) {
+      // User not logged in, redirect to welcome
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(builder: (context) => const Welcome()),
+        );
+      });
+      return const Scaffold(
+        body: Center(child: CircularProgressIndicator()),
+      );
+    }
+
+    return StreamBuilder(
+      stream: _studentService.getStudentProfile(uid),
+      builder: (context, snapshot) {
+        final student = snapshot.data;
+        final studentName = student?.name ?? 'Student';
+        final studentEmail = student?.email ?? '';
+
+        return Scaffold(
+          appBar: AppBar(
+            title: const Text('Student Portal'),
+            actions: [
+              // Notifications
+              StreamBuilder<int>(
+                stream: _getUnreadNotificationsCount(uid),
+                builder: (context, countSnapshot) {
+                  final count = countSnapshot.data ?? 0;
+                  return Stack(
+                    children: [
+                      IconButton(
+                        icon: const Icon(Icons.notifications),
+                        onPressed: () => _showNotifications(),
+                      ),
+                      if (count > 0)
+                        Positioned(
+                          right: 8,
+                          top: 8,
+                          child: Container(
+                            padding: const EdgeInsets.all(4),
+                            decoration: const BoxDecoration(
+                              color: Colors.red,
+                              shape: BoxShape.circle,
+                            ),
+                            constraints: const BoxConstraints(
+                              minWidth: 16,
+                              minHeight: 16,
+                            ),
+                            child: Text(
+                              count > 9 ? '9+' : count.toString(),
+                              style: const TextStyle(
+                                color: Colors.white,
+                                fontSize: 10,
+                                fontWeight: FontWeight.bold,
+                              ),
+                              textAlign: TextAlign.center,
+                            ),
+                          ),
+                        ),
+                    ],
+                  );
+                },
+              ),
+              IconButton(
+                icon: const Icon(Icons.settings),
+                onPressed: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => const SettingsPage(),
+                    ),
+                  );
+                },
+              ),
+            ],
+          ),
+          drawer: _buildDrawer(studentName, studentEmail),
+          body: _pages[_selectedIndex],
+          bottomNavigationBar: NavigationBar(
+            selectedIndex: _selectedIndex,
+            onDestinationSelected: (index) {
+              setState(() {
+                _selectedIndex = index;
+              });
             },
+            destinations: const [
+              NavigationDestination(
+                icon: Icon(Icons.home),
+                label: 'Home',
+              ),
+              NavigationDestination(
+                icon: Icon(Icons.event),
+                label: 'Events',
+              ),
+              NavigationDestination(
+                icon: Icon(Icons.history),
+                label: 'History',
+              ),
+              NavigationDestination(
+                icon: Icon(Icons.analytics),
+                label: 'Analytics',
+              ),
+            ],
           ),
-          IconButton(
-            icon: const Icon(Icons.settings),
-            onPressed: () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (context) => const SettingsPage(),
-                ),
-              );
-            },
-          ),
-        ],
-      ),
-      drawer: _buildDrawer(),
-      body: _pages[_selectedIndex],
-      bottomNavigationBar: NavigationBar(
-        selectedIndex: _selectedIndex,
-        onDestinationSelected: (index) {
-          setState(() {
-            _selectedIndex = index;
-          });
-        },
-        destinations: const [
-          NavigationDestination(
-            icon: Icon(Icons.home),
-            label: 'Home',
-          ),
-          NavigationDestination(
-            icon: Icon(Icons.event),
-            label: 'Events',
-          ),
-          NavigationDestination(
-            icon: Icon(Icons.history),
-            label: 'History',
-          ),
-          NavigationDestination(
-            icon: Icon(Icons.analytics),
-            label: 'Analytics',
-          ),
-        ],
-      ),
+        );
+      },
     );
   }
 
-  Widget _buildDrawer() {
+  Widget _buildDrawer(String studentName, String studentEmail) {
     return Drawer(
       child: ListView(
         padding: EdgeInsets.zero,
@@ -103,7 +167,7 @@ class _StudentDashboardState extends State<StudentDashboard> {
                   radius: 30,
                   backgroundColor: Colors.white,
                   child: Text(
-                    'J',
+                    studentName.isNotEmpty ? studentName[0] : 'S',
                     style: TextStyle(
                       fontSize: 28,
                       fontWeight: FontWeight.bold,
@@ -112,16 +176,16 @@ class _StudentDashboardState extends State<StudentDashboard> {
                   ),
                 ),
                 const SizedBox(height: 12),
-                const Text(
-                  'Juan Dela Cruz',
-                  style: TextStyle(
+                Text(
+                  studentName,
+                  style: const TextStyle(
                     color: Colors.white,
                     fontSize: 20,
                     fontWeight: FontWeight.bold,
                   ),
                 ),
                 Text(
-                  'student@isatu.edu.ph',
+                  studentEmail,
                   style: TextStyle(
                     color: Colors.white.withOpacity(0.8),
                     fontSize: 14,
@@ -131,7 +195,6 @@ class _StudentDashboardState extends State<StudentDashboard> {
             ),
           ),
           
-          // Profile
           ListTile(
             leading: const Icon(Icons.person),
             title: const Text('Profile'),
@@ -146,7 +209,6 @@ class _StudentDashboardState extends State<StudentDashboard> {
             },
           ),
           
-          // Documents
           ListTile(
             leading: const Icon(Icons.assignment),
             title: const Text('Documents'),
@@ -161,37 +223,42 @@ class _StudentDashboardState extends State<StudentDashboard> {
             },
           ),
           
-          // Sanctions
-          ListTile(
-            leading: const Icon(Icons.warning),
-            title: const Text('Sanctions'),
-            trailing: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-              decoration: BoxDecoration(
-                color: Colors.green,
-                borderRadius: BorderRadius.circular(12),
-              ),
-              child: const Text(
-                '0',
-                style: TextStyle(
-                  color: Colors.white,
-                  fontSize: 12,
-                  fontWeight: FontWeight.bold,
+          // Sanctions with counter
+          StreamBuilder<int>(
+            stream: _getSanctionsCount(),
+            builder: (context, snapshot) {
+              final count = snapshot.data ?? 0;
+              return ListTile(
+                leading: const Icon(Icons.warning),
+                title: const Text('Sanctions'),
+                trailing: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                  decoration: BoxDecoration(
+                    color: count > 0 ? Colors.red : Colors.green,
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Text(
+                    count.toString(),
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 12,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
                 ),
-              ),
-            ),
-            onTap: () {
-              Navigator.pop(context);
-              Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (context) => const StudentSanctions(),
-                ),
+                onTap: () {
+                  Navigator.pop(context);
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => const StudentSanctions(),
+                    ),
+                  );
+                },
               );
             },
           ),
           
-          // QR Scanner
           ListTile(
             leading: const Icon(Icons.qr_code_scanner),
             title: const Text('QR Scanner'),
@@ -203,7 +270,6 @@ class _StudentDashboardState extends State<StudentDashboard> {
           
           const Divider(),
           
-          // Settings
           ListTile(
             leading: const Icon(Icons.settings),
             title: const Text('Settings'),
@@ -218,7 +284,6 @@ class _StudentDashboardState extends State<StudentDashboard> {
             },
           ),
           
-          // Help & Support
           ListTile(
             leading: const Icon(Icons.help_outline),
             title: const Text('Help & Support'),
@@ -228,7 +293,6 @@ class _StudentDashboardState extends State<StudentDashboard> {
             },
           ),
           
-          // About
           ListTile(
             leading: const Icon(Icons.info_outline),
             title: const Text('About'),
@@ -240,7 +304,6 @@ class _StudentDashboardState extends State<StudentDashboard> {
           
           const Divider(),
           
-          // Logout
           ListTile(
             leading: const Icon(Icons.logout, color: Colors.red),
             title: const Text('Logout', style: TextStyle(color: Colors.red)),
@@ -252,6 +315,30 @@ class _StudentDashboardState extends State<StudentDashboard> {
         ],
       ),
     );
+  }
+
+  Stream<int> _getUnreadNotificationsCount(String uid) {
+    // TODO: Implement notifications collection
+    // For now, return 0
+    return Stream.value(0);
+  }
+
+  Stream<int> _getSanctionsCount() async* {
+    final uid = FirebaseService.currentUserId;
+    if (uid == null) {
+      yield 0;
+      return;
+    }
+
+    final student = await _studentService.getStudentProfile(uid).first;
+    if (student == null) {
+      yield 0;
+      return;
+    }
+
+    yield* _studentService.getSanctions(student.studentId).map((sanctions) {
+      return sanctions.where((s) => s.status == 'Active').length;
+    });
   }
 
   void _showNotifications() {
@@ -285,56 +372,16 @@ class _StudentDashboardState extends State<StudentDashboard> {
                 TextButton(
                   onPressed: () {
                     Navigator.pop(context);
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(
-                        content: Text('All notifications cleared'),
-                        behavior: SnackBarBehavior.floating,
-                      ),
-                    );
                   },
                   child: const Text('Clear All'),
                 ),
               ],
             ),
             const Divider(),
-            
-            _NotificationItem(
-              icon: Icons.event,
-              iconColor: Colors.blue,
-              title: 'New Event Tomorrow',
-              message: 'Student Assembly at 10:00 AM',
-              time: '2h ago',
-              isUnread: true,
-            ),
-            
-            _NotificationItem(
-              icon: Icons.check_circle,
-              iconColor: Colors.green,
-              title: 'Attendance Confirmed',
-              message: 'Flag Ceremony - 7:05 AM',
-              time: '5h ago',
-              isUnread: false,
-            ),
-            
-            _NotificationItem(
-              icon: Icons.warning,
-              iconColor: Colors.orange,
-              title: 'Reminder',
-              message: 'Check-in opens in 30 minutes',
-              time: '1d ago',
-              isUnread: false,
-            ),
-            
-            const SizedBox(height: 8),
-            
-            SizedBox(
-              width: double.infinity,
-              child: TextButton(
-                onPressed: () {
-                  Navigator.pop(context);
-                  _showComingSoon('View All Notifications');
-                },
-                child: const Text('View All Notifications'),
+            const Padding(
+              padding: EdgeInsets.all(20),
+              child: Center(
+                child: Text('No new notifications'),
               ),
             ),
           ],
@@ -421,7 +468,9 @@ class _StudentDashboardState extends State<StudentDashboard> {
             child: const Text('Cancel'),
           ),
           TextButton(
-            onPressed: () {
+            onPressed: () async {
+              await _authService.signOut();
+              if (!mounted) return;
               Navigator.pop(context); // Close dialog
               Navigator.pushReplacement(
                 context,
@@ -436,76 +485,6 @@ class _StudentDashboardState extends State<StudentDashboard> {
             ),
           ),
         ],
-      ),
-    );
-  }
-}
-
-class _NotificationItem extends StatelessWidget {
-  final IconData icon;
-  final Color iconColor;
-  final String title;
-  final String message;
-  final String time;
-  final bool isUnread;
-
-  const _NotificationItem({
-    required this.icon,
-    required this.iconColor,
-    required this.title,
-    required this.message,
-    required this.time,
-    required this.isUnread,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      margin: const EdgeInsets.only(bottom: 8),
-      decoration: BoxDecoration(
-        color: isUnread
-            ? Theme.of(context).colorScheme.primary.withOpacity(0.05)
-            : null,
-        borderRadius: BorderRadius.circular(8),
-      ),
-      child: ListTile(
-        leading: CircleAvatar(
-          backgroundColor: iconColor.withOpacity(0.1),
-          child: Icon(icon, color: iconColor, size: 20),
-        ),
-        title: Row(
-          children: [
-            Expanded(
-              child: Text(
-                title,
-                style: TextStyle(
-                  fontWeight: isUnread ? FontWeight.bold : FontWeight.normal,
-                  fontSize: 14,
-                ),
-              ),
-            ),
-            if (isUnread)
-              Container(
-                width: 8,
-                height: 8,
-                decoration: BoxDecoration(
-                  color: Theme.of(context).colorScheme.primary,
-                  shape: BoxShape.circle,
-                ),
-              ),
-          ],
-        ),
-        subtitle: Text(
-          message,
-          style: const TextStyle(fontSize: 12),
-        ),
-        trailing: Text(
-          time,
-          style: TextStyle(
-            fontSize: 11,
-            color: Colors.grey.shade600,
-          ),
-        ),
       ),
     );
   }

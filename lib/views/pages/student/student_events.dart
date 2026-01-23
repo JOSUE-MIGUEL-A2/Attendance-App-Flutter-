@@ -1,6 +1,8 @@
+// lib/views/pages/student/student_events.dart
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
-import 'package:provider/provider.dart';
-import 'package:thesis_attendance/services/data_provider.dart';
+import 'package:thesis_attendance/services/student_service.dart';
+import 'package:thesis_attendance/services/firebase_service.dart';
 import 'package:thesis_attendance/models/student_model.dart';
 
 class StudentEvents extends StatefulWidget {
@@ -11,129 +13,214 @@ class StudentEvents extends StatefulWidget {
 }
 
 class _StudentEventsState extends State<StudentEvents> {
+  final StudentService _studentService = StudentService();
   String _selectedFilter = 'All';
   final List<String> _filters = ['All', 'Today', 'This Week', 'Upcoming', 'Past'];
   bool _isCheckingIn = false;
 
   @override
   Widget build(BuildContext context) {
-    return Consumer<DataProvider>(
-      builder: (context, provider, child) {
-        final student = provider.currentStudent;
-        List<Event> filteredEvents;
+    final uid = FirebaseService.currentUserId;
 
-        // Filter events based on selection
-        switch (_selectedFilter) {
-          case 'Today':
-            filteredEvents = provider.getTodayEvents();
-            break;
-          case 'This Week':
-            final now = DateTime.now();
-            final weekEnd = now.add(const Duration(days: 7));
-            filteredEvents = provider.events.where((e) => 
-              e.date.isAfter(now) && e.date.isBefore(weekEnd)
-            ).toList();
-            break;
-          case 'Upcoming':
-            filteredEvents = provider.getUpcomingEvents();
-            break;
-          case 'Past':
-            final now = DateTime.now();
-            filteredEvents = provider.events.where((e) => 
-              e.date.isBefore(now) && e.status == 'completed'
-            ).toList();
-            break;
-          default:
-            filteredEvents = provider.events;
+    if (uid == null) {
+      return const Center(child: Text('Not logged in'));
+    }
+
+    return StreamBuilder<Student?>(
+      stream: _studentService.getStudentProfile(uid),
+      builder: (context, studentSnapshot) {
+        if (!studentSnapshot.hasData) {
+          return const Center(child: CircularProgressIndicator());
         }
 
-        return SingleChildScrollView(
-          padding: const EdgeInsets.all(16),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              // Filter Chips
-              SingleChildScrollView(
-                scrollDirection: Axis.horizontal,
-                child: Row(
-                  children: _filters.map((filter) {
-                    final isSelected = _selectedFilter == filter;
-                    return Padding(
-                      padding: const EdgeInsets.only(right: 8),
-                      child: FilterChip(
-                        label: Text(filter),
-                        selected: isSelected,
-                        onSelected: (selected) {
-                          setState(() {
-                            _selectedFilter = filter;
-                          });
-                        },
-                        selectedColor: Theme.of(context).colorScheme.primary,
-                        labelStyle: TextStyle(
-                          color: isSelected ? Colors.white : null,
-                          fontWeight: isSelected ? FontWeight.bold : null,
-                        ),
-                      ),
-                    );
-                  }).toList(),
-                ),
-              ),
+        final student = studentSnapshot.data!;
 
-              const SizedBox(height: 16),
+        return StreamBuilder<List<Event>>(
+          stream: _getFilteredEvents(),
+          builder: (context, eventsSnapshot) {
+            if (eventsSnapshot.connectionState == ConnectionState.waiting) {
+              return const Center(child: CircularProgressIndicator());
+            }
 
-              // Events List
-              if (filteredEvents.isEmpty)
-                Center(
-                  child: Padding(
-                    padding: const EdgeInsets.all(40),
-                    child: Column(
-                      children: [
-                        Icon(
-                          Icons.event_busy,
-                          size: 64,
-                          color: Colors.grey.shade400,
-                        ),
-                        const SizedBox(height: 16),
-                        Text(
-                          'No ${_selectedFilter.toLowerCase()} events',
-                          style: TextStyle(
-                            fontSize: 16,
-                            color: Colors.grey.shade600,
+            final events = eventsSnapshot.data ?? [];
+
+            return SingleChildScrollView(
+              padding: const EdgeInsets.all(16),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // Filter Chips
+                  SingleChildScrollView(
+                    scrollDirection: Axis.horizontal,
+                    child: Row(
+                      children: _filters.map((filter) {
+                        final isSelected = _selectedFilter == filter;
+                        return Padding(
+                          padding: const EdgeInsets.only(right: 8),
+                          child: FilterChip(
+                            label: Text(filter),
+                            selected: isSelected,
+                            onSelected: (selected) {
+                              setState(() {
+                                _selectedFilter = filter;
+                              });
+                            },
+                            selectedColor: Theme.of(context).colorScheme.primary,
+                            labelStyle: TextStyle(
+                              color: isSelected ? Colors.white : null,
+                              fontWeight: isSelected ? FontWeight.bold : null,
+                            ),
                           ),
-                        ),
-                      ],
+                        );
+                      }).toList(),
                     ),
                   ),
-                )
-              else
-                ...filteredEvents.map((event) {
-                  final isCheckedIn = provider.isCheckedIn(
-                    student?.studentId ?? '',
-                    event.id,
-                  );
-                  final daysUntil = event.date.difference(DateTime.now()).inDays;
 
-                  return Padding(
-                    padding: const EdgeInsets.only(bottom: 12),
-                    child: _EventCard(
-                      event: event,
-                      studentId: student?.studentId ?? '',
-                      isCheckedIn: isCheckedIn,
-                      daysUntil: daysUntil,
-                      onCheckIn: () => _handleCheckIn(event),
-                      onViewDetails: () => _showEventDetails(event, isCheckedIn),
-                      isCheckingIn: _isCheckingIn,
-                    ),
-                  );
-                }),
-            ],
-          ),
+                  const SizedBox(height: 16),
+
+                  // Events List
+                  if (events.isEmpty)
+                    Center(
+                      child: Padding(
+                        padding: const EdgeInsets.all(40),
+                        child: Column(
+                          children: [
+                            Icon(
+                              Icons.event_busy,
+                              size: 64,
+                              color: Colors.grey.shade400,
+                            ),
+                            const SizedBox(height: 16),
+                            Text(
+                              'No ${_selectedFilter.toLowerCase()} events',
+                              style: TextStyle(
+                                fontSize: 16,
+                                color: Colors.grey.shade600,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    )
+                  else
+                    ...events.map((event) {
+                      return FutureBuilder<bool>(
+                        future: _studentService.isCheckedIn(student.studentId, event.id),
+                        builder: (context, checkedInSnapshot) {
+                          final isCheckedIn = checkedInSnapshot.data ?? false;
+                          final daysUntil = event.date.difference(DateTime.now()).inDays;
+
+                          return Padding(
+                            padding: const EdgeInsets.only(bottom: 12),
+                            child: _EventCard(
+                              event: event,
+                              studentId: student.studentId,
+                              isCheckedIn: isCheckedIn,
+                              daysUntil: daysUntil,
+                              onCheckIn: () => _handleCheckIn(event, student.studentId),
+                              onViewDetails: () => _showEventDetails(event, isCheckedIn, student.studentId),
+                              isCheckingIn: _isCheckingIn,
+                            ),
+                          );
+                        },
+                      );
+                    }),
+                ],
+              ),
+            );
+          },
         );
       },
     );
   }
 
-  Future<void> _handleCheckIn(Event event) async {
+  Stream<List<Event>> _getFilteredEvents() {
+    final now = DateTime.now();
+    
+    switch (_selectedFilter) {
+      case 'Today':
+        return _studentService.getTodayEvents();
+        
+      case 'This Week':
+        return FirebaseService.firestore
+            .collection('events')
+            .where('date', isGreaterThanOrEqualTo: now)
+            .where('date', isLessThanOrEqualTo: now.add(const Duration(days: 7)))
+            .snapshots()
+            .map((snapshot) => snapshot.docs.map((doc) {
+              final data = doc.data();
+              return Event(
+                id: doc.id,
+                title: data['title'] ?? '',
+                description: data['description'] ?? '',
+                date: (data['date'] as Timestamp).toDate(),
+                startTime: data['startTime'] ?? '',
+                endTime: data['endTime'] ?? '',
+                lateCutoff: data['lateCutoff'] ?? '',
+                status: data['status'] ?? 'upcoming',
+                totalStudents: data['totalStudents'] ?? 0,
+                checkedIn: data['checkedIn'],
+                late: data['late'],
+                absent: data['absent'],
+              );
+            }).toList());
+            
+      case 'Upcoming':
+        return _studentService.getUpcomingEvents();
+        
+      case 'Past':
+        return FirebaseService.firestore
+            .collection('events')
+            .where('date', isLessThan: now)
+            .where('status', isEqualTo: 'completed')
+            .orderBy('date', descending: true)
+            .limit(20)
+            .snapshots()
+            .map((snapshot) => snapshot.docs.map((doc) {
+              final data = doc.data();
+              return Event(
+                id: doc.id,
+                title: data['title'] ?? '',
+                description: data['description'] ?? '',
+                date: (data['date'] as Timestamp).toDate(),
+                startTime: data['startTime'] ?? '',
+                endTime: data['endTime'] ?? '',
+                lateCutoff: data['lateCutoff'] ?? '',
+                status: data['status'] ?? 'completed',
+                totalStudents: data['totalStudents'] ?? 0,
+                checkedIn: data['checkedIn'],
+                late: data['late'],
+                absent: data['absent'],
+              );
+            }).toList());
+            
+      default: // All
+        return FirebaseService.firestore
+            .collection('events')
+            .orderBy('date', descending: false)
+            .limit(50)
+            .snapshots()
+            .map((snapshot) => snapshot.docs.map((doc) {
+              final data = doc.data();
+              return Event(
+                id: doc.id,
+                title: data['title'] ?? '',
+                description: data['description'] ?? '',
+                date: (data['date'] as Timestamp).toDate(),
+                startTime: data['startTime'] ?? '',
+                endTime: data['endTime'] ?? '',
+                lateCutoff: data['lateCutoff'] ?? '',
+                status: data['status'] ?? 'upcoming',
+                totalStudents: data['totalStudents'] ?? 0,
+                checkedIn: data['checkedIn'],
+                late: data['late'],
+                absent: data['absent'],
+              );
+            }).toList());
+    }
+  }
+
+  Future<void> _handleCheckIn(Event event, String studentId) async {
     if (event.status != 'active') {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
@@ -150,26 +237,26 @@ class _StudentEventsState extends State<StudentEvents> {
     });
 
     try {
-      final provider = Provider.of<DataProvider>(context, listen: false);
-      final success = await provider.checkInToEvent(
-        provider.currentStudent?.studentId ?? '',
-        event.id,
+      final result = await _studentService.checkInToEvent(
+        studentId: studentId,
+        eventId: event.id,
       );
 
       if (!mounted) return;
 
-      if (success) {
+      if (result['success']) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Successfully checked in to ${event.title}'),
+            content: Text(result['message']),
             backgroundColor: Colors.green,
             behavior: SnackBarBehavior.floating,
           ),
         );
+        setState(() {}); // Refresh to show checked in state
       } else {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Failed to check in. Please try again.'),
+          SnackBar(
+            content: Text(result['message']),
             backgroundColor: Colors.red,
             behavior: SnackBarBehavior.floating,
           ),
@@ -193,128 +280,143 @@ class _StudentEventsState extends State<StudentEvents> {
     }
   }
 
-  void _showEventDetails(Event event, bool isCheckedIn) {
-    final provider = Provider.of<DataProvider>(context, listen: false);
-    final attendanceRecord = provider.attendanceRecords.firstWhere(
-      (r) => r.eventId == event.id && r.studentId == provider.currentStudent?.studentId,
-      orElse: () => AttendanceRecord(
-        id: '',
-        studentId: '',
-        eventId: '',
-        eventName: '',
-        eventDate: DateTime.now(),
-        eventTime: '',
-        status: '',
-      ),
-    );
-
+  void _showEventDetails(Event event, bool isCheckedIn, String studentId) {
     showDialog(
       context: context,
-      builder: (context) => AlertDialog(
-        title: Text(event.title),
-        content: SingleChildScrollView(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              // Event Details
-              _DetailRow('Description:', event.description),
-              const SizedBox(height: 12),
-              _DetailRow('Date:', _formatDate(event.date)),
-              _DetailRow('Time:', '${event.startTime} - ${event.endTime}'),
-              _DetailRow('Late Cutoff:', event.lateCutoff),
-              
-              const Divider(height: 24),
-              
-              // Status
-              _DetailRow('Status:', event.status.toUpperCase()),
-              
-              if (isCheckedIn) ...[
-                const Divider(height: 24),
-                Container(
-                  padding: const EdgeInsets.all(12),
-                  decoration: BoxDecoration(
-                    color: Colors.green.shade50,
-                    borderRadius: BorderRadius.circular(8),
-                    border: Border.all(color: Colors.green),
-                  ),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Row(
-                        children: const [
-                          Icon(Icons.check_circle, color: Colors.green, size: 20),
-                          SizedBox(width: 8),
-                          Text(
-                            'Check-in Confirmed',
-                            style: TextStyle(
-                              fontWeight: FontWeight.bold,
-                              color: Colors.green,
-                            ),
+      builder: (context) => FutureBuilder<List<AttendanceRecord>>(
+        future: FirebaseService.firestore
+            .collection('attendance')
+            .where('studentId', isEqualTo: studentId)
+            .where('eventId', isEqualTo: event.id)
+            .limit(1)
+            .get()
+            .then((snapshot) {
+              return snapshot.docs.map((doc) {
+                final data = doc.data();
+                return AttendanceRecord(
+                  id: doc.id,
+                  studentId: data['studentId'] ?? '',
+                  eventId: data['eventId'] ?? '',
+                  eventName: data['eventName'] ?? '',
+                  eventDate: (data['eventDate'] as Timestamp).toDate(),
+                  eventTime: data['eventTime'] ?? '',
+                  status: data['status'] ?? '',
+                  checkInTime: data['checkInTime'] != null
+                      ? (data['checkInTime'] as Timestamp).toDate()
+                      : null,
+                  remarks: data['remarks'],
+                );
+              }).toList();
+            }),
+        builder: (context, recordSnapshot) {
+          final attendanceRecord = recordSnapshot.data?.isNotEmpty == true
+              ? recordSnapshot.data!.first
+              : null;
+
+          return AlertDialog(
+            title: Text(event.title),
+            content: SingleChildScrollView(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  _DetailRow('Description:', event.description),
+                  const SizedBox(height: 12),
+                  _DetailRow('Date:', _formatDate(event.date)),
+                  _DetailRow('Time:', '${event.startTime} - ${event.endTime}'),
+                  _DetailRow('Late Cutoff:', event.lateCutoff),
+                  
+                  const Divider(height: 24),
+                  
+                  _DetailRow('Status:', event.status.toUpperCase()),
+                  
+                  if (isCheckedIn && attendanceRecord != null) ...[
+                    const Divider(height: 24),
+                    Container(
+                      padding: const EdgeInsets.all(12),
+                      decoration: BoxDecoration(
+                        color: Colors.green.shade50,
+                        borderRadius: BorderRadius.circular(8),
+                        border: Border.all(color: Colors.green),
+                      ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            children: const [
+                              Icon(Icons.check_circle, color: Colors.green, size: 20),
+                              SizedBox(width: 8),
+                              Text(
+                                'Check-in Confirmed',
+                                style: TextStyle(
+                                  fontWeight: FontWeight.bold,
+                                  color: Colors.green,
+                                ),
+                              ),
+                            ],
                           ),
+                          if (attendanceRecord.checkInTime != null) ...[
+                            const SizedBox(height: 8),
+                            Text(
+                              'Time: ${attendanceRecord.checkInTime!.hour}:${attendanceRecord.checkInTime!.minute.toString().padLeft(2, '0')}',
+                              style: const TextStyle(fontSize: 13),
+                            ),
+                          ],
+                          if (attendanceRecord.status == 'late' && attendanceRecord.remarks != null) ...[
+                            const SizedBox(height: 4),
+                            Text(
+                              attendanceRecord.remarks!,
+                              style: const TextStyle(
+                                fontSize: 12,
+                                color: Colors.orange,
+                                fontStyle: FontStyle.italic,
+                              ),
+                            ),
+                          ],
                         ],
                       ),
-                      if (attendanceRecord.checkInTime != null) ...[
-                        const SizedBox(height: 8),
-                        Text(
-                          'Time: ${attendanceRecord.checkInTime!.hour}:${attendanceRecord.checkInTime!.minute.toString().padLeft(2, '0')}',
-                          style: const TextStyle(fontSize: 13),
-                        ),
-                      ],
-                      if (attendanceRecord.status == 'late' && attendanceRecord.remarks != null) ...[
-                        const SizedBox(height: 4),
-                        Text(
-                          attendanceRecord.remarks!,
-                          style: const TextStyle(
-                            fontSize: 12,
-                            color: Colors.orange,
-                            fontStyle: FontStyle.italic,
-                          ),
-                        ),
-                      ],
-                    ],
-                  ),
-                ),
-              ],
-              
-              const SizedBox(height: 16),
-              
-              // Event Stats (if available)
-              if (event.checkedIn != null) ...[
-                const Text(
-                  'Event Statistics:',
-                  style: TextStyle(fontWeight: FontWeight.bold),
-                ),
-                const SizedBox(height: 8),
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceAround,
-                  children: [
-                    _MiniStat('Present', event.checkedIn!, Colors.green),
-                    _MiniStat('Late', event.late ?? 0, Colors.orange),
-                    _MiniStat('Absent', event.absent ?? 0, Colors.red),
+                    ),
                   ],
-                ),
-              ],
-            ],
-          ),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('Close'),
-          ),
-          if (!isCheckedIn && event.status == 'active')
-            ElevatedButton(
-              onPressed: () {
-                Navigator.pop(context);
-                _handleCheckIn(event);
-              },
-              style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.green,
+                  
+                  const SizedBox(height: 16),
+                  
+                  if (event.checkedIn != null) ...[
+                    const Text(
+                      'Event Statistics:',
+                      style: TextStyle(fontWeight: FontWeight.bold),
+                    ),
+                    const SizedBox(height: 8),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceAround,
+                      children: [
+                        _MiniStat('Present', event.checkedIn!, Colors.green),
+                        _MiniStat('Late', event.late ?? 0, Colors.orange),
+                        _MiniStat('Absent', event.absent ?? 0, Colors.red),
+                      ],
+                    ),
+                  ],
+                ],
               ),
-              child: const Text('Check In Now'),
             ),
-        ],
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(context),
+                child: const Text('Close'),
+              ),
+              if (!isCheckedIn && event.status == 'active')
+                ElevatedButton(
+                  onPressed: () {
+                    Navigator.pop(context);
+                    _handleCheckIn(event, studentId);
+                  },
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.green,
+                  ),
+                  child: const Text('Check In Now'),
+                ),
+            ],
+          );
+        },
       ),
     );
   }

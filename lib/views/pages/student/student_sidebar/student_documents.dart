@@ -1,5 +1,7 @@
+// lib/views/pages/student/student_sidebar/student_documents.dart
 import 'package:flutter/material.dart';
-import 'package:thesis_attendance/services/data_provider.dart';
+import 'package:thesis_attendance/services/student_service.dart';
+import 'package:thesis_attendance/services/firebase_service.dart';
 import 'package:thesis_attendance/models/student_model.dart';
 
 class StudentDocuments extends StatefulWidget {
@@ -10,6 +12,7 @@ class StudentDocuments extends StatefulWidget {
 }
 
 class _StudentDocumentsState extends State<StudentDocuments> {
+  final StudentService _service = StudentService();
   String _selectedCategory = 'All';
   final List<String> _categories = [
     'All',
@@ -22,159 +25,219 @@ class _StudentDocumentsState extends State<StudentDocuments> {
 
   @override
   Widget build(BuildContext context) {
-    final student = dataProvider.currentStudent;
-    final allDocuments = dataProvider.getStudentDocuments(student?.studentId ?? '');
-    
-    final filteredDocuments = _selectedCategory == 'All'
-        ? allDocuments
-        : allDocuments.where((doc) => doc.category == _selectedCategory).toList();
+    final uid = FirebaseService.currentUserId;
 
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('My Documents'),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.upload_file),
-            onPressed: _isUploading ? null : () => _showUploadDialog(),
-          ),
-        ],
-      ),
-      body: Column(
-        children: [
-          // Category Filter
-          Container(
-            padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
-            color: Theme.of(context).colorScheme.surface,
-            child: SingleChildScrollView(
-              scrollDirection: Axis.horizontal,
-              child: Row(
-                children: _categories.map((category) {
-                  final isSelected = _selectedCategory == category;
-                  return Padding(
-                    padding: const EdgeInsets.only(right: 8),
-                    child: FilterChip(
-                      label: Text(category),
-                      selected: isSelected,
-                      onSelected: (selected) {
-                        setState(() {
-                          _selectedCategory = category;
-                        });
-                      },
-                      selectedColor: Theme.of(context).colorScheme.primary,
-                      labelStyle: TextStyle(
-                        color: isSelected ? Colors.white : null,
-                        fontWeight: isSelected ? FontWeight.bold : null,
+    if (uid == null) {
+      return Scaffold(
+        appBar: AppBar(title: const Text('My Documents')),
+        body: const Center(child: Text('Not logged in')),
+      );
+    }
+
+    return StreamBuilder<Student?>(
+      stream: _service.getStudentProfile(uid),
+      builder: (context, studentSnapshot) {
+        if (studentSnapshot.connectionState == ConnectionState.waiting) {
+          return Scaffold(
+            appBar: AppBar(title: const Text('My Documents')),
+            body: const Center(child: CircularProgressIndicator()),
+          );
+        }
+
+        if (studentSnapshot.hasError) {
+          return Scaffold(
+            appBar: AppBar(title: const Text('My Documents')),
+            body: Center(child: Text('Error: ${studentSnapshot.error}')),
+          );
+        }
+
+        if (!studentSnapshot.hasData || studentSnapshot.data == null) {
+          return Scaffold(
+            appBar: AppBar(title: const Text('My Documents')),
+            body: const Center(child: Text('Profile not found')),
+          );
+        }
+
+        final student = studentSnapshot.data!;
+
+        return StreamBuilder<List<StudentDocument>>(
+          stream: _service.getDocuments(student.studentId),
+          builder: (context, snapshot) {
+            if (snapshot.connectionState == ConnectionState.waiting) {
+              return Scaffold(
+                appBar: AppBar(title: const Text('My Documents')),
+                body: const Center(child: CircularProgressIndicator()),
+              );
+            }
+
+            if (snapshot.hasError) {
+              return Scaffold(
+                appBar: AppBar(title: const Text('My Documents')),
+                body: Center(child: Text('Error: ${snapshot.error}')),
+              );
+            }
+
+            final allDocuments = snapshot.data ?? [];
+            final filteredDocuments = _selectedCategory == 'All'
+                ? allDocuments
+                : allDocuments.where((doc) => doc.category == _selectedCategory).toList();
+
+            return Scaffold(
+              appBar: AppBar(
+                title: const Text('My Documents'),
+                actions: [
+                  IconButton(
+                    icon: const Icon(Icons.upload_file),
+                    onPressed: _isUploading ? null : () => _showUploadDialog(student.studentId),
+                  ),
+                ],
+              ),
+              body: Column(
+                children: [
+                  // Category Filter
+                  Container(
+                    padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
+                    color: Theme.of(context).colorScheme.surface,
+                    child: SingleChildScrollView(
+                      scrollDirection: Axis.horizontal,
+                      child: Row(
+                        children: _categories.map((category) {
+                          final isSelected = _selectedCategory == category;
+                          return Padding(
+                            padding: const EdgeInsets.only(right: 8),
+                            child: FilterChip(
+                              label: Text(category),
+                              selected: isSelected,
+                              onSelected: (selected) {
+                                setState(() {
+                                  _selectedCategory = category;
+                                });
+                              },
+                              selectedColor: Theme.of(context).colorScheme.primary,
+                              labelStyle: TextStyle(
+                                color: isSelected ? Colors.white : null,
+                                fontWeight: isSelected ? FontWeight.bold : null,
+                              ),
+                            ),
+                          );
+                        }).toList(),
                       ),
                     ),
-                  );
-                }).toList(),
-              ),
-            ),
-          ),
+                  ),
 
-          // Documents List
-          Expanded(
-            child: filteredDocuments.isEmpty
-                ? Center(
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Icon(
-                          Icons.folder_open,
-                          size: 64,
-                          color: Colors.grey.shade400,
-                        ),
-                        const SizedBox(height: 16),
-                        Text(
-                          'No documents found',
-                          style: TextStyle(
-                            fontSize: 16,
-                            color: Colors.grey.shade600,
-                          ),
-                        ),
-                        const SizedBox(height: 8),
-                        TextButton.icon(
-                          onPressed: () => _showUploadDialog(),
-                          icon: const Icon(Icons.upload),
-                          label: const Text('Upload Document'),
-                        ),
-                      ],
-                    ),
-                  )
-                : ListView.builder(
-                    padding: const EdgeInsets.all(16),
-                    itemCount: filteredDocuments.length + 1,
-                    itemBuilder: (context, index) {
-                      if (index == filteredDocuments.length) {
-                        // Storage Info at the end
-                        return Card(
-                          color: Colors.blue.shade50,
-                          child: Padding(
-                            padding: const EdgeInsets.all(16),
+                  // Documents List
+                  Expanded(
+                    child: filteredDocuments.isEmpty
+                        ? Center(
                             child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
+                              mainAxisAlignment: MainAxisAlignment.center,
                               children: [
-                                Row(
-                                  children: [
-                                    Icon(Icons.cloud, color: Colors.blue.shade700),
-                                    const SizedBox(width: 8),
-                                    Text(
-                                      'Storage Information',
-                                      style: TextStyle(
-                                        fontWeight: FontWeight.bold,
-                                        color: Colors.blue.shade700,
-                                      ),
-                                    ),
-                                  ],
+                                Icon(
+                                  Icons.folder_open,
+                                  size: 64,
+                                  color: Colors.grey.shade400,
                                 ),
-                                const SizedBox(height: 12),
-                                LinearProgressIndicator(
-                                  value: allDocuments.length / 20,
-                                  backgroundColor: Colors.grey.shade300,
-                                  valueColor: AlwaysStoppedAnimation<Color>(Colors.blue.shade700),
+                                const SizedBox(height: 16),
+                                Text(
+                                  'No documents found',
+                                  style: TextStyle(
+                                    fontSize: 16,
+                                    color: Colors.grey.shade600,
+                                  ),
                                 ),
                                 const SizedBox(height: 8),
-                                Text(
-                                  '${allDocuments.length} of 20 documents uploaded',
-                                  style: TextStyle(
-                                    fontSize: 12,
-                                    color: Colors.grey.shade700,
-                                  ),
+                                TextButton.icon(
+                                  onPressed: () => _showUploadDialog(student.studentId),
+                                  icon: const Icon(Icons.upload),
+                                  label: const Text('Upload Document'),
                                 ),
                               ],
                             ),
-                          ),
-                        );
-                      }
+                          )
+                        : ListView.builder(
+                            padding: const EdgeInsets.all(16),
+                            itemCount: filteredDocuments.length + 1,
+                            itemBuilder: (context, index) {
+                              if (index == filteredDocuments.length) {
+                                return _buildStorageInfo(allDocuments.length);
+                              }
 
-                      final document = filteredDocuments[index];
-                      return Padding(
-                        padding: const EdgeInsets.only(bottom: 12),
-                        child: _DocumentCard(
-                          document: document,
-                          onDelete: () => _handleDeleteDocument(document),
-                        ),
-                      );
-                    },
+                              final document = filteredDocuments[index];
+                              return Padding(
+                                padding: const EdgeInsets.only(bottom: 12),
+                                child: _DocumentCard(
+                                  document: document,
+                                  onDelete: () => _handleDeleteDocument(document),
+                                ),
+                              );
+                            },
+                          ),
                   ),
-          ),
-        ],
-      ),
-      floatingActionButton: FloatingActionButton.extended(
-        onPressed: _isUploading ? null : () => _showUploadDialog(),
-        icon: _isUploading
-            ? const SizedBox(
-                width: 16,
-                height: 16,
-                child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
-              )
-            : const Icon(Icons.add),
-        label: Text(_isUploading ? 'Uploading...' : 'Upload Document'),
+                ],
+              ),
+              floatingActionButton: FloatingActionButton.extended(
+                onPressed: _isUploading ? null : () => _showUploadDialog(student.studentId),
+                icon: _isUploading
+                    ? const SizedBox(
+                        width: 16,
+                        height: 16,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2,
+                          color: Colors.white,
+                        ),
+                      )
+                    : const Icon(Icons.add),
+                label: Text(_isUploading ? 'Uploading...' : 'Upload Document'),
+              ),
+            );
+          },
+        );
+      },
+    );
+  }
+
+  Widget _buildStorageInfo(int documentCount) {
+    return Card(
+      color: Colors.blue.shade50,
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Icon(Icons.cloud, color: Colors.blue.shade700),
+                const SizedBox(width: 8),
+                Text(
+                  'Storage Information',
+                  style: TextStyle(
+                    fontWeight: FontWeight.bold,
+                    color: Colors.blue.shade700,
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 12),
+            LinearProgressIndicator(
+              value: documentCount / 20,
+              backgroundColor: Colors.grey.shade300,
+              valueColor: AlwaysStoppedAnimation<Color>(Colors.blue.shade700),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              '$documentCount of 20 documents uploaded',
+              style: TextStyle(
+                fontSize: 12,
+                color: Colors.grey.shade700,
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
 
-  void _showUploadDialog() {
+  void _showUploadDialog(String studentId) {
     final fileNameController = TextEditingController();
     String selectedCategory = 'Academic';
 
@@ -223,7 +286,6 @@ class _StudentDocumentsState extends State<StudentDocuments> {
               const SizedBox(height: 16),
               OutlinedButton.icon(
                 onPressed: () {
-                  // Simulate file picker
                   ScaffoldMessenger.of(context).showSnackBar(
                     const SnackBar(
                       content: Text('File picker opened (simulated)'),
@@ -257,6 +319,7 @@ class _StudentDocumentsState extends State<StudentDocuments> {
 
                 Navigator.pop(context);
                 await _handleUploadDocument(
+                  studentId,
                   fileNameController.text,
                   selectedCategory,
                 );
@@ -269,16 +332,19 @@ class _StudentDocumentsState extends State<StudentDocuments> {
     );
   }
 
-  Future<void> _handleUploadDocument(String fileName, String category) async {
+  Future<void> _handleUploadDocument(
+    String studentId,
+    String fileName,
+    String category,
+  ) async {
     setState(() {
       _isUploading = true;
     });
 
     try {
-      final student = dataProvider.currentStudent;
       final document = StudentDocument(
-        id: DateTime.now().millisecondsSinceEpoch.toString(),
-        studentId: student?.studentId ?? '',
+        id: '',
+        studentId: studentId,
         fileName: fileName,
         fileType: 'PDF',
         fileSize: '${(100 + (DateTime.now().millisecond % 300))} KB',
@@ -287,28 +353,21 @@ class _StudentDocumentsState extends State<StudentDocuments> {
         status: 'Pending',
       );
 
-      final success = await dataProvider.uploadDocument(document);
+      final success = await _service.uploadDocument(document);
 
       if (!mounted) return;
 
-      if (success) {
-        setState(() {}); // Refresh the list
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Document uploaded successfully and sent for verification'),
-            backgroundColor: Colors.green,
-            behavior: SnackBarBehavior.floating,
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            success
+                ? 'Document uploaded successfully and sent for verification'
+                : 'Failed to upload document',
           ),
-        );
-      } else {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Failed to upload document'),
-            backgroundColor: Colors.red,
-            behavior: SnackBarBehavior.floating,
-          ),
-        );
-      }
+          backgroundColor: success ? Colors.green : Colors.red,
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
     } catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
@@ -348,21 +407,21 @@ class _StudentDocumentsState extends State<StudentDocuments> {
 
     if (confirmed != true) return;
 
-    final success = await dataProvider.deleteDocument(document.id);
+    final success = await _service.deleteDocument(document.id);
 
     if (!mounted) return;
 
-    if (success) {
-      setState(() {}); // Refresh the list
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Document deleted'),
-          behavior: SnackBarBehavior.floating,
-        ),
-      );
-    }
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(success ? 'Document deleted' : 'Failed to delete document'),
+        backgroundColor: success ? Colors.green : Colors.red,
+        behavior: SnackBarBehavior.floating,
+      ),
+    );
   }
 }
+
+// ==================== WIDGET CLASSES ====================
 
 class _DocumentCard extends StatelessWidget {
   final StudentDocument document;
@@ -407,7 +466,7 @@ class _DocumentCard extends StatelessWidget {
     return Card(
       elevation: 2,
       child: InkWell(
-        onTap: () => _showDocumentOptions(context),
+        onTap: () => _showDocumentOptions(context, onDelete),
         borderRadius: BorderRadius.circular(12),
         child: Padding(
           padding: const EdgeInsets.all(16),
@@ -574,7 +633,7 @@ class _DocumentCard extends StatelessWidget {
     );
   }
 
-  void _showDocumentOptions(BuildContext context) {
+  void _showDocumentOptions(BuildContext context, VoidCallback onDelete) {
     showModalBottomSheet(
       context: context,
       builder: (context) => Container(
@@ -636,7 +695,20 @@ class _DocumentCard extends StatelessWidget {
   }
 
   String _formatDate(DateTime date) {
-    final months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+    final months = [
+      'Jan',
+      'Feb',
+      'Mar',
+      'Apr',
+      'May',
+      'Jun',
+      'Jul',
+      'Aug',
+      'Sep',
+      'Oct',
+      'Nov',
+      'Dec'
+    ];
     return '${months[date.month - 1]} ${date.day}, ${date.year}';
   }
 }

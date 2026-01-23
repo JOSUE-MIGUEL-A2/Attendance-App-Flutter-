@@ -1,5 +1,7 @@
+// lib/views/pages/student/student_home_firebase.dart
 import 'package:flutter/material.dart';
-import 'package:thesis_attendance/services/data_provider.dart';
+import 'package:thesis_attendance/services/student_service.dart';
+import 'package:thesis_attendance/services/firebase_service.dart';
 import 'package:thesis_attendance/models/student_model.dart';
 
 class StudentHome extends StatefulWidget {
@@ -10,239 +12,323 @@ class StudentHome extends StatefulWidget {
 }
 
 class _StudentHomeState extends State<StudentHome> {
+  final StudentService _studentService = StudentService();
   bool _isCheckingIn = false;
 
   @override
   Widget build(BuildContext context) {
-    final student = dataProvider.currentStudent;
-    final stats = dataProvider.getAttendanceStats(student?.studentId ?? '');
-    final todayEvents = dataProvider.getTodayEvents();
-    final upcomingEvents = dataProvider.getUpcomingEvents().take(2).toList();
+    final uid = FirebaseService.currentUserId;
 
-    return SingleChildScrollView(
-      padding: const EdgeInsets.all(16),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          // Welcome Card
-          Card(
-            elevation: 4,
-            child: Container(
-              padding: const EdgeInsets.all(20),
-              decoration: BoxDecoration(
-                gradient: LinearGradient(
-                  colors: [
-                    Theme.of(context).colorScheme.primary,
-                    Theme.of(context).colorScheme.primary.withOpacity(0.7),
-                  ],
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
-                ),
-                borderRadius: BorderRadius.circular(12),
-              ),
-              child: Row(
-                children: [
-                  CircleAvatar(
-                    radius: 30,
-                    backgroundColor: Colors.white,
-                    child: Text(
-                      student?.name[0] ?? 'J',
-                      style: TextStyle(
-                        fontSize: 28,
-                        fontWeight: FontWeight.bold,
-                        color: Theme.of(context).colorScheme.primary,
+    if (uid == null) {
+      return const Center(child: Text('Not logged in'));
+    }
+
+    return StreamBuilder<Student?>(
+      stream: _studentService.getStudentProfile(uid),
+      builder: (context, studentSnapshot) {
+        if (studentSnapshot.connectionState == ConnectionState.waiting) {
+          return const Center(child: CircularProgressIndicator());
+        }
+
+        if (!studentSnapshot.hasData || studentSnapshot.data == null) {
+          return const Center(child: Text('Student data not found'));
+        }
+
+        final student = studentSnapshot.data!;
+
+        return StreamBuilder<List<Event>>(
+          stream: _studentService.getTodayEvents(),
+          builder: (context, eventsSnapshot) {
+            final todayEvents = eventsSnapshot.data ?? [];
+
+            return StreamBuilder<List<Event>>(
+              stream: _studentService.getUpcomingEvents(),
+              builder: (context, upcomingSnapshot) {
+                final upcomingEvents = (upcomingSnapshot.data ?? []).take(2).toList();
+
+                return FutureBuilder<Map<String, int>>(
+                  future: _studentService.getAttendanceStats(student.studentId),
+                  builder: (context, statsSnapshot) {
+                    final stats = statsSnapshot.data ?? {
+                      'total': 0,
+                      'present': 0,
+                      'late': 0,
+                      'absent': 0,
+                      'rate': 0,
+                    };
+
+                    return SingleChildScrollView(
+                      padding: const EdgeInsets.all(16),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          // Welcome Card
+                          _buildWelcomeCard(context, student),
+                          const SizedBox(height: 24),
+
+                          // Quick Stats
+                          _buildQuickStats(context, stats, student),
+                          const SizedBox(height: 24),
+
+                          // Today's Events
+                          _buildTodayEventsSection(context, todayEvents, student),
+                          const SizedBox(height: 24),
+
+                          // Upcoming Events
+                          _buildUpcomingEventsSection(context, upcomingEvents),
+                        ],
                       ),
+                    );
+                  },
+                );
+              },
+            );
+          },
+        );
+      },
+    );
+  }
+
+  Widget _buildWelcomeCard(BuildContext context, Student student) {
+    return Card(
+      elevation: 4,
+      child: Container(
+        padding: const EdgeInsets.all(20),
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            colors: [
+              Theme.of(context).colorScheme.primary,
+              Theme.of(context).colorScheme.primary.withOpacity(0.7),
+            ],
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+          ),
+          borderRadius: BorderRadius.circular(12),
+        ),
+        child: Row(
+          children: [
+            CircleAvatar(
+              radius: 30,
+              backgroundColor: Colors.white,
+              child: Text(
+                student.name.isNotEmpty ? student.name[0] : 'S',
+                style: TextStyle(
+                  fontSize: 28,
+                  fontWeight: FontWeight.bold,
+                  color: Theme.of(context).colorScheme.primary,
+                ),
+              ),
+            ),
+            const SizedBox(width: 16),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Welcome Back!',
+                    style: TextStyle(
+                      color: Colors.white.withOpacity(0.9),
+                      fontSize: 14,
                     ),
                   ),
-                  const SizedBox(width: 16),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          'Welcome Back!',
-                          style: TextStyle(
-                            color: Colors.white.withOpacity(0.9),
-                            fontSize: 14,
-                          ),
-                        ),
-                        Text(
-                          student?.name ?? 'Juan Dela Cruz',
-                          style: const TextStyle(
-                            color: Colors.white,
-                            fontSize: 20,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                        Text(
-                          'ID: ${student?.studentId ?? '2024-12345'}',
-                          style: TextStyle(
-                            color: Colors.white.withOpacity(0.8),
-                            fontSize: 12,
-                          ),
-                        ),
-                      ],
+                  Text(
+                    student.name,
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 20,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  Text(
+                    'ID: ${student.studentId}',
+                    style: TextStyle(
+                      color: Colors.white.withOpacity(0.8),
+                      fontSize: 12,
                     ),
                   ),
                 ],
               ),
             ),
-          ),
-
-          const SizedBox(height: 24),
-
-          // Quick Stats
-          Row(
-            children: [
-              Expanded(
-                child: _StatCard(
-                  title: 'Attendance',
-                  value: '${stats['rate'] ?? 95}%',
-                  icon: Icons.check_circle,
-                  color: Colors.green,
-                ),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: _StatCard(
-                  title: 'Sanctions',
-                  value: dataProvider.getStudentSanctions(student?.studentId ?? '').length.toString(),
-                  icon: Icons.warning,
-                  color: Colors.grey,
-                ),
-              ),
-            ],
-          ),
-
-          const SizedBox(height: 24),
-
-          // Today's Events Section
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Text(
-                "Today's Events - Check In",
-                style: Theme.of(context).textTheme.titleLarge,
-              ),
-              TextButton.icon(
-                onPressed: () {
-                  // Navigate to events page
-                },
-                icon: const Icon(Icons.arrow_forward, size: 16),
-                label: const Text('View All'),
-              ),
-            ],
-          ),
-
-          const SizedBox(height: 12),
-
-          // Today's Events List
-          if (todayEvents.isEmpty)
-            Card(
-              child: Padding(
-                padding: const EdgeInsets.all(20),
-                child: Center(
-                  child: Column(
-                    children: [
-                      Icon(
-                        Icons.event_busy,
-                        size: 48,
-                        color: Colors.grey.shade400,
-                      ),
-                      const SizedBox(height: 8),
-                      Text(
-                        'No events scheduled for today',
-                        style: TextStyle(
-                          color: Colors.grey.shade600,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-            )
-          else
-            ...todayEvents.map((event) => Padding(
-              padding: const EdgeInsets.only(bottom: 12),
-              child: _TodayEventCard(
-                event: event,
-                studentId: student?.studentId ?? '',
-                isCheckedIn: dataProvider.isCheckedIn(
-                  student?.studentId ?? '',
-                  event.id,
-                ),
-                onCheckIn: () => _handleCheckIn(event),
-                isCheckingIn: _isCheckingIn,
-              ),
-            )),
-
-          const SizedBox(height: 24),
-
-          // This Week's Events
-          Text(
-            'This Week\'s Events',
-            style: Theme.of(context).textTheme.titleLarge,
-          ),
-
-          const SizedBox(height: 12),
-
-          if (upcomingEvents.isEmpty)
-            Card(
-              child: Padding(
-                padding: const EdgeInsets.all(20),
-                child: Center(
-                  child: Text(
-                    'No upcoming events this week',
-                    style: TextStyle(
-                      color: Colors.grey.shade600,
-                    ),
-                  ),
-                ),
-              ),
-            )
-          else
-            ...upcomingEvents.map((event) {
-              final daysUntil = event.date.difference(DateTime.now()).inDays;
-              return Padding(
-                padding: const EdgeInsets.only(bottom: 12),
-                child: _WeekEventCard(
-                  title: event.title,
-                  date: _formatDate(event.date),
-                  time: '${event.startTime} - ${event.endTime}',
-                  daysUntil: daysUntil,
-                ),
-              );
-            }),
-        ],
+          ],
+        ),
       ),
     );
   }
 
-  Future<void> _handleCheckIn(Event event) async {
+  Widget _buildQuickStats(BuildContext context, Map<String, int> stats, Student student) {
+    return FutureBuilder<List<Sanction>>(
+      future: _studentService.getSanctions(student.studentId).first,
+      builder: (context, sanctionsSnapshot) {
+        final sanctionsCount = sanctionsSnapshot.data?.length ?? 0;
+
+        return Row(
+          children: [
+            Expanded(
+              child: _StatCard(
+                title: 'Attendance',
+                value: '${stats['rate'] ?? 95}%',
+                icon: Icons.check_circle,
+                color: Colors.green,
+              ),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: _StatCard(
+                title: 'Sanctions',
+                value: sanctionsCount.toString(),
+                icon: Icons.warning,
+                color: sanctionsCount > 0 ? Colors.red : Colors.grey,
+              ),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  Widget _buildTodayEventsSection(BuildContext context, List<Event> todayEvents, Student student) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Text(
+              "Today's Events - Check In",
+              style: Theme.of(context).textTheme.titleLarge,
+            ),
+            TextButton.icon(
+              onPressed: () {
+                // Navigate to events tab
+              },
+              icon: const Icon(Icons.arrow_forward, size: 16),
+              label: const Text('View All'),
+            ),
+          ],
+        ),
+        const SizedBox(height: 12),
+        if (todayEvents.isEmpty)
+          Card(
+            child: Padding(
+              padding: const EdgeInsets.all(20),
+              child: Center(
+                child: Column(
+                  children: [
+                    Icon(
+                      Icons.event_busy,
+                      size: 48,
+                      color: Colors.grey.shade400,
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      'No events scheduled for today',
+                      style: TextStyle(
+                        color: Colors.grey.shade600,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          )
+        else
+          ...todayEvents.map((event) => Padding(
+            padding: const EdgeInsets.only(bottom: 12),
+            child: FutureBuilder<bool>(
+              future: _studentService.isCheckedIn(student.studentId, event.id),
+              builder: (context, checkedInSnapshot) {
+                final isCheckedIn = checkedInSnapshot.data ?? false;
+
+                return _TodayEventCard(
+                  event: event,
+                  studentId: student.studentId,
+                  isCheckedIn: isCheckedIn,
+                  onCheckIn: () => _handleCheckIn(event, student.studentId),
+                  isCheckingIn: _isCheckingIn,
+                );
+              },
+            ),
+          )),
+      ],
+    );
+  }
+
+  Widget _buildUpcomingEventsSection(BuildContext context, List<Event> upcomingEvents) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          'This Week\'s Events',
+          style: Theme.of(context).textTheme.titleLarge,
+        ),
+        const SizedBox(height: 12),
+        if (upcomingEvents.isEmpty)
+          Card(
+            child: Padding(
+              padding: const EdgeInsets.all(20),
+              child: Center(
+                child: Text(
+                  'No upcoming events this week',
+                  style: TextStyle(
+                    color: Colors.grey.shade600,
+                  ),
+                ),
+              ),
+            ),
+          )
+        else
+          ...upcomingEvents.map((event) {
+            final daysUntil = event.date.difference(DateTime.now()).inDays;
+            return Padding(
+              padding: const EdgeInsets.only(bottom: 12),
+              child: _WeekEventCard(
+                title: event.title,
+                date: _formatDate(event.date),
+                time: '${event.startTime} - ${event.endTime}',
+                daysUntil: daysUntil,
+              ),
+            );
+          }),
+      ],
+    );
+  }
+
+  Future<void> _handleCheckIn(Event event, String studentId) async {
+    if (event.status != 'active') {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('This event is not active yet'),
+          backgroundColor: Colors.orange,
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+      return;
+    }
+
     setState(() {
       _isCheckingIn = true;
     });
 
     try {
-      final success = await dataProvider.checkInToEvent(
-        dataProvider.currentStudent?.studentId ?? '',
-        event.id,
+      final result = await _studentService.checkInToEvent(
+        studentId: studentId,
+        eventId: event.id,
       );
 
       if (!mounted) return;
 
-      if (success) {
+      if (result['success']) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Successfully checked in to ${event.title}'),
+            content: Text(result['message']),
             backgroundColor: Colors.green,
             behavior: SnackBarBehavior.floating,
           ),
         );
       } else {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Failed to check in. Please try again.'),
+          SnackBar(
+            content: Text(result['message']),
             backgroundColor: Colors.red,
             behavior: SnackBarBehavior.floating,
           ),

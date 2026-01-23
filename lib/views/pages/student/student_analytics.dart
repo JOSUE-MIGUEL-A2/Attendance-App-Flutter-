@@ -1,7 +1,8 @@
+// lib/views/pages/student/student_analytics.dart
 import 'package:flutter/material.dart';
-import 'package:provider/provider.dart';
+import 'package:thesis_attendance/services/student_service.dart';
+import 'package:thesis_attendance/services/firebase_service.dart';
 import 'package:thesis_attendance/models/student_model.dart';
-import 'package:thesis_attendance/services/data_provider.dart';
 
 class StudentAnalytics extends StatefulWidget {
   const StudentAnalytics({super.key});
@@ -11,6 +12,7 @@ class StudentAnalytics extends StatefulWidget {
 }
 
 class _StudentAnalyticsState extends State<StudentAnalytics> {
+  final StudentService _service = StudentService();
   String _selectedPeriod = 'All Time';
   final List<String> _periods = [
     'This Week',
@@ -21,306 +23,401 @@ class _StudentAnalyticsState extends State<StudentAnalytics> {
 
   @override
   Widget build(BuildContext context) {
-    return Consumer<DataProvider>(
-      builder: (context, provider, child) {
-        final student = provider.currentStudent;
-        final allRecords = provider.getStudentAttendanceHistory(student?.studentId ?? '');
-        final stats = provider.getAttendanceStats(student?.studentId ?? '');
+    final uid = FirebaseService.currentUserId;
 
-        // Filter records based on period
-        final now = DateTime.now();
-        final filteredRecords = allRecords.where((record) {
-          switch (_selectedPeriod) {
-            case 'This Week':
-              final weekStart = now.subtract(Duration(days: now.weekday - 1));
-              return record.eventDate.isAfter(weekStart);
-            case 'This Month':
-              return record.eventDate.month == now.month && 
-                     record.eventDate.year == now.year;
-            case 'This Semester':
-              // Assuming semester is 6 months
-              final semesterStart = now.subtract(const Duration(days: 180));
-              return record.eventDate.isAfter(semesterStart);
-            default:
-              return true;
-          }
-        }).toList();
+    if (uid == null) {
+      return const Center(child: Text('Not logged in'));
+    }
 
-        final filteredPresent = filteredRecords.where((r) => r.status == 'present').length;
-        final filteredLate = filteredRecords.where((r) => r.status == 'late').length;
-        final filteredAbsent = filteredRecords.where((r) => r.status == 'absent').length;
-        final filteredTotal = filteredRecords.length;
-        final filteredRate = filteredTotal > 0 
-            ? ((filteredPresent + filteredLate) / filteredTotal * 100).round() 
-            : 0;
+    return StreamBuilder<Student?>(
+      stream: _service.getStudentProfile(uid),
+      builder: (context, studentSnapshot) {
+        if (studentSnapshot.connectionState == ConnectionState.waiting) {
+          return const Center(child: CircularProgressIndicator());
+        }
 
-        return SingleChildScrollView(
-          padding: const EdgeInsets.all(16),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              // Header with Period Selector
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        if (studentSnapshot.hasError) {
+          return Center(child: Text('Error: ${studentSnapshot.error}'));
+        }
+
+        if (!studentSnapshot.hasData || studentSnapshot.data == null) {
+          return const Center(child: Text('Profile not found'));
+        }
+
+        final student = studentSnapshot.data!;
+
+        return StreamBuilder<List<AttendanceRecord>>(
+          stream: _service.getAttendanceHistory(student.studentId),
+          builder: (context, attendanceSnapshot) {
+            if (attendanceSnapshot.connectionState == ConnectionState.waiting) {
+              return const Center(child: CircularProgressIndicator());
+            }
+
+            if (attendanceSnapshot.hasError) {
+              return Center(child: Text('Error: ${attendanceSnapshot.error}'));
+            }
+
+            final allRecords = attendanceSnapshot.data ?? [];
+
+            // Filter records based on period
+            final now = DateTime.now();
+            final filteredRecords = allRecords.where((record) {
+              switch (_selectedPeriod) {
+                case 'This Week':
+                  final weekStart = now.subtract(Duration(days: now.weekday - 1));
+                  return record.eventDate.isAfter(weekStart);
+                case 'This Month':
+                  return record.eventDate.month == now.month &&
+                      record.eventDate.year == now.year;
+                case 'This Semester':
+                  final semesterStart = now.subtract(const Duration(days: 180));
+                  return record.eventDate.isAfter(semesterStart);
+                default:
+                  return true;
+              }
+            }).toList();
+
+            final filteredPresent =
+                filteredRecords.where((r) => r.status == 'present').length;
+            final filteredLate =
+                filteredRecords.where((r) => r.status == 'late').length;
+            final filteredAbsent =
+                filteredRecords.where((r) => r.status == 'absent').length;
+            final filteredTotal = filteredRecords.length;
+            final filteredRate = filteredTotal > 0
+                ? ((filteredPresent + filteredLate) / filteredTotal * 100).round()
+                : 0;
+
+            return SingleChildScrollView(
+              padding: const EdgeInsets.all(16),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(
-                    'Analytics Overview',
-                    style: Theme.of(context).textTheme.titleLarge,
-                  ),
-                  Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
-                    decoration: BoxDecoration(
-                      color: Theme.of(context).colorScheme.primary.withOpacity(0.1),
-                      borderRadius: BorderRadius.circular(8),
-                      border: Border.all(
-                        color: Theme.of(context).colorScheme.primary.withOpacity(0.3),
+                  // Header with Period Selector
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Text(
+                        'Analytics Overview',
+                        style: Theme.of(context).textTheme.titleLarge,
                       ),
-                    ),
-                    child: DropdownButton<String>(
-                      value: _selectedPeriod,
-                      underline: const SizedBox(),
-                      isDense: true,
-                      items: _periods
-                          .map((period) => DropdownMenuItem(
-                                value: period,
-                                child: Text(
-                                  period,
-                                  style: const TextStyle(fontSize: 12),
-                                ),
-                              ))
-                          .toList(),
-                      onChanged: (value) {
-                        if (value != null) {
-                          setState(() {
-                            _selectedPeriod = value;
-                          });
-                        }
-                      },
-                    ),
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 12,
+                          vertical: 4,
+                        ),
+                        decoration: BoxDecoration(
+                          color: Theme.of(context)
+                              .colorScheme
+                              .primary
+                              .withOpacity(0.1),
+                          borderRadius: BorderRadius.circular(8),
+                          border: Border.all(
+                            color: Theme.of(context)
+                                .colorScheme
+                                .primary
+                                .withOpacity(0.3),
+                          ),
+                        ),
+                        child: DropdownButton<String>(
+                          value: _selectedPeriod,
+                          underline: const SizedBox(),
+                          isDense: true,
+                          items: _periods
+                              .map((period) => DropdownMenuItem(
+                                    value: period,
+                                    child: Text(
+                                      period,
+                                      style: const TextStyle(fontSize: 12),
+                                    ),
+                                  ))
+                              .toList(),
+                          onChanged: (value) {
+                            if (value != null) {
+                              setState(() {
+                                _selectedPeriod = value;
+                              });
+                            }
+                          },
+                        ),
+                      ),
+                    ],
                   ),
-                ],
-              ),
 
-              const SizedBox(height: 24),
+                  const SizedBox(height: 24),
 
-              // Attendance Rate Card
-              Card(
-                elevation: 3,
-                child: InkWell(
-                  onTap: () => _showAttendanceBreakdown(
+                  // Attendance Rate Card
+                  _buildAttendanceRateCard(
+                    context,
+                    filteredRate,
                     filteredPresent,
                     filteredLate,
                     filteredAbsent,
                     filteredTotal,
                   ),
-                  borderRadius: BorderRadius.circular(12),
-                  child: Container(
-                    padding: const EdgeInsets.all(20),
-                    decoration: BoxDecoration(
-                      gradient: LinearGradient(
-                        colors: [
-                          Theme.of(context).colorScheme.primary,
-                          Theme.of(context).colorScheme.primary.withOpacity(0.7),
-                        ],
-                        begin: Alignment.topLeft,
-                        end: Alignment.bottomRight,
-                      ),
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    child: Column(
-                      children: [
-                        const Text(
-                          'Overall Attendance Rate',
-                          style: TextStyle(
-                            color: Colors.white,
-                            fontSize: 16,
-                            fontWeight: FontWeight.w500,
-                          ),
-                        ),
-                        const SizedBox(height: 16),
-                        Stack(
-                          alignment: Alignment.center,
-                          children: [
-                            SizedBox(
-                              width: 150,
-                              height: 150,
-                              child: CircularProgressIndicator(
-                                value: filteredRate / 100,
-                                strokeWidth: 12,
-                                backgroundColor: Colors.white.withOpacity(0.3),
-                                valueColor: const AlwaysStoppedAnimation<Color>(Colors.white),
-                              ),
-                            ),
-                            Column(
-                              children: [
-                                Text(
-                                  '$filteredRate%',
-                                  style: const TextStyle(
-                                    color: Colors.white,
-                                    fontSize: 42,
-                                    fontWeight: FontWeight.bold,
-                                  ),
-                                ),
-                                Text(
-                                  '${filteredPresent + filteredLate}/$filteredTotal Events',
-                                  style: TextStyle(
-                                    color: Colors.white.withOpacity(0.9),
-                                    fontSize: 14,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ],
-                        ),
-                        const SizedBox(height: 16),
-                        Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceAround,
-                          children: [
-                            _MiniStat(
-                              label: 'On Time',
-                              value: filteredPresent.toString(),
-                              icon: Icons.check_circle,
-                            ),
-                            _MiniStat(
-                              label: 'Late',
-                              value: filteredLate.toString(),
-                              icon: Icons.schedule,
-                            ),
-                            _MiniStat(
-                              label: 'Absent',
-                              value: filteredAbsent.toString(),
-                              icon: Icons.cancel,
-                            ),
-                          ],
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-              ),
 
-              const SizedBox(height: 24),
+                  const SizedBox(height: 24),
 
-              // Statistics Grid
-              Text(
-                'Detailed Statistics',
-                style: Theme.of(context).textTheme.titleLarge,
-              ),
-
-              const SizedBox(height: 12),
-
-              Row(
-                children: [
-                  Expanded(
-                    child: _StatCard(
-                      title: 'Perfect Attendance',
-                      value: _calculatePerfectMonths(allRecords).toString(),
-                      subtitle: 'Months',
-                      icon: Icons.stars,
-                      color: Colors.amber,
-                      onTap: () => _showPerfectMonths(allRecords),
-                    ),
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: _StatCard(
-                      title: 'Total Sanctions',
-                      value: provider.getStudentSanctions(student?.studentId ?? '').length.toString(),
-                      subtitle: 'Violations',
-                      icon: Icons.warning,
-                      color: provider.getStudentSanctions(student?.studentId ?? '').isEmpty 
-                          ? Colors.green 
-                          : Colors.red,
-                      onTap: () => _showSanctions(context, provider),
-                    ),
-                  ),
-                ],
-              ),
-
-              const SizedBox(height: 12),
-
-              Row(
-                children: [
-                  Expanded(
-                    child: _StatCard(
-                      title: 'Events Attended',
-                      value: (filteredPresent + filteredLate).toString(),
-                      subtitle: _selectedPeriod,
-                      icon: Icons.event_available,
-                      color: Colors.blue,
-                      onTap: () => _showAttendedEvents(filteredRecords),
-                    ),
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: _StatCard(
-                      title: 'Avg Check-in Time',
-                      value: _calculateAverageCheckIn(filteredRecords),
-                      subtitle: 'Before Start',
-                      icon: Icons.timer,
-                      color: Colors.purple,
-                      onTap: () => _showCheckInAnalysis(filteredRecords),
-                    ),
-                  ),
-                ],
-              ),
-
-              const SizedBox(height: 24),
-
-              // Monthly Breakdown
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
+                  // Statistics Grid
                   Text(
-                    'Monthly Breakdown',
+                    'Detailed Statistics',
                     style: Theme.of(context).textTheme.titleLarge,
                   ),
-                  TextButton(
-                    onPressed: () => _showFullBreakdown(allRecords),
-                    child: const Text('View All'),
+
+                  const SizedBox(height: 12),
+
+                  _buildStatisticsGrid(
+                    allRecords,
+                    filteredRecords,
+                    filteredPresent,
+                    filteredLate,
+                    student.studentId,
+                  ),
+
+                  const SizedBox(height: 24),
+
+                  // Monthly Breakdown
+                  _buildMonthlyBreakdown(context, allRecords),
+
+                  const SizedBox(height: 24),
+
+                  // Download Report Button
+                  Center(
+                    child: ElevatedButton.icon(
+                      onPressed: () => _generateReport(filteredRecords),
+                      icon: const Icon(Icons.download),
+                      label: const Text('Download Detailed Report'),
+                      style: ElevatedButton.styleFrom(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 24,
+                          vertical: 12,
+                        ),
+                      ),
+                    ),
                   ),
                 ],
               ),
-
-              const SizedBox(height: 12),
-
-              ..._generateMonthlyBreakdown(allRecords).take(3).map((breakdown) {
-                return Padding(
-                  padding: const EdgeInsets.only(bottom: 8),
-                  child: _MonthlyBreakdownCard(
-                    month: breakdown['month'] as String,
-                    totalEvents: breakdown['total'] as int,
-                    present: breakdown['present'] as int,
-                    late: breakdown['late'] as int,
-                    absent: breakdown['absent'] as int,
-                    rate: breakdown['rate'] as int,
-                    onTap: () => _showMonthDetails(breakdown),
-                  ),
-                );
-              }),
-
-              const SizedBox(height: 24),
-
-              // Download Report Button
-              Center(
-                child: ElevatedButton.icon(
-                  onPressed: () => _generateReport(stats, filteredRecords),
-                  icon: const Icon(Icons.download),
-                  label: const Text('Download Detailed Report'),
-                  style: ElevatedButton.styleFrom(
-                    padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
-                  ),
-                ),
-              ),
-            ],
-          ),
+            );
+          },
         );
       },
     );
   }
 
+  Widget _buildAttendanceRateCard(
+    BuildContext context,
+    int rate,
+    int present,
+    int late,
+    int absent,
+    int total,
+  ) {
+    return Card(
+      elevation: 3,
+      child: InkWell(
+        onTap: () => _showAttendanceBreakdown(present, late, absent, total),
+        borderRadius: BorderRadius.circular(12),
+        child: Container(
+          padding: const EdgeInsets.all(20),
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              colors: [
+                Theme.of(context).colorScheme.primary,
+                Theme.of(context).colorScheme.primary.withOpacity(0.7),
+              ],
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+            ),
+            borderRadius: BorderRadius.circular(12),
+          ),
+          child: Column(
+            children: [
+              const Text(
+                'Overall Attendance Rate',
+                style: TextStyle(
+                  color: Colors.white,
+                  fontSize: 16,
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
+              const SizedBox(height: 16),
+              Stack(
+                alignment: Alignment.center,
+                children: [
+                  SizedBox(
+                    width: 150,
+                    height: 150,
+                    child: CircularProgressIndicator(
+                      value: rate / 100,
+                      strokeWidth: 12,
+                      backgroundColor: Colors.white.withOpacity(0.3),
+                      valueColor: const AlwaysStoppedAnimation<Color>(Colors.white),
+                    ),
+                  ),
+                  Column(
+                    children: [
+                      Text(
+                        '$rate%',
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 42,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      Text(
+                        '${present + late}/$total Events',
+                        style: TextStyle(
+                          color: Colors.white.withOpacity(0.9),
+                          fontSize: 14,
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+              const SizedBox(height: 16),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceAround,
+                children: [
+                  _MiniStat(
+                    label: 'On Time',
+                    value: present.toString(),
+                    icon: Icons.check_circle,
+                  ),
+                  _MiniStat(
+                    label: 'Late',
+                    value: late.toString(),
+                    icon: Icons.schedule,
+                  ),
+                  _MiniStat(
+                    label: 'Absent',
+                    value: absent.toString(),
+                    icon: Icons.cancel,
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildStatisticsGrid(
+    List<AttendanceRecord> allRecords,
+    List<AttendanceRecord> filteredRecords,
+    int present,
+    int late,
+    String studentId,
+  ) {
+    final perfectMonths = _calculatePerfectMonths(allRecords);
+    final avgCheckIn = _calculateAverageCheckIn(filteredRecords);
+
+    return Column(
+      children: [
+        Row(
+          children: [
+            Expanded(
+              child: _StatCard(
+                title: 'Perfect Attendance',
+                value: perfectMonths.toString(),
+                subtitle: 'Months',
+                icon: Icons.stars,
+                color: Colors.amber,
+                onTap: () => _showPerfectMonths(allRecords),
+              ),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: StreamBuilder<List<Sanction>>(
+                stream: _service.getSanctions(studentId),
+                builder: (context, snapshot) {
+                  final sanctionsCount = snapshot.data?.length ?? 0;
+                  return _StatCard(
+                    title: 'Total Sanctions',
+                    value: sanctionsCount.toString(),
+                    subtitle: 'Violations',
+                    icon: Icons.warning,
+                    color: sanctionsCount == 0 ? Colors.green : Colors.red,
+                    onTap: () {},
+                  );
+                },
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 12),
+        Row(
+          children: [
+            Expanded(
+              child: _StatCard(
+                title: 'Events Attended',
+                value: (present + late).toString(),
+                subtitle: _selectedPeriod,
+                icon: Icons.event_available,
+                color: Colors.blue,
+                onTap: () => _showAttendedEvents(filteredRecords),
+              ),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: _StatCard(
+                title: 'Avg Check-in Time',
+                value: avgCheckIn,
+                subtitle: 'Before Start',
+                icon: Icons.timer,
+                color: Colors.purple,
+                onTap: () {},
+              ),
+            ),
+          ],
+        ),
+      ],
+    );
+  }
+
+  Widget _buildMonthlyBreakdown(
+    BuildContext context,
+    List<AttendanceRecord> allRecords,
+  ) {
+    final breakdown = _generateMonthlyBreakdown(allRecords);
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Text(
+              'Monthly Breakdown',
+              style: Theme.of(context).textTheme.titleLarge,
+            ),
+            TextButton(
+              onPressed: () => _showFullBreakdown(allRecords),
+              child: const Text('View All'),
+            ),
+          ],
+        ),
+        const SizedBox(height: 12),
+        ...breakdown.take(3).map((data) {
+          return Padding(
+            padding: const EdgeInsets.only(bottom: 8),
+            child: _MonthlyBreakdownCard(
+              month: data['month'] as String,
+              totalEvents: data['total'] as int,
+              present: data['present'] as int,
+              late: data['late'] as int,
+              absent: data['absent'] as int,
+              rate: data['rate'] as int,
+              onTap: () => _showMonthDetails(data),
+            ),
+          );
+        }),
+      ],
+    );
+  }
+
   int _calculatePerfectMonths(List<AttendanceRecord> records) {
-    // Group by month and count perfect attendance months
     final monthlyRecords = <String, List<AttendanceRecord>>{};
     for (var record in records) {
       final key = '${record.eventDate.year}-${record.eventDate.month}';
@@ -340,26 +437,24 @@ class _StudentAnalyticsState extends State<StudentAnalytics> {
 
   String _calculateAverageCheckIn(List<AttendanceRecord> records) {
     if (records.isEmpty) return '0 min';
-    
+
     int totalMinutes = 0;
     int count = 0;
 
     for (var record in records) {
       if (record.checkInTime != null) {
-        // Simplified calculation - assumes events start at the hour
-        final checkIn = record.checkInTime!;
         try {
           final eventHour = int.parse(record.eventTime.split(':')[0]);
           final eventMinutes = eventHour * 60;
-          final checkInMinutes = checkIn.hour * 60 + checkIn.minute;
+          final checkInMinutes =
+              record.checkInTime!.hour * 60 + record.checkInTime!.minute;
           final minutesDiff = eventMinutes - checkInMinutes;
-          
+
           if (minutesDiff > 0) {
             totalMinutes += minutesDiff;
             count++;
           }
         } catch (e) {
-          // Skip if time parsing fails
           continue;
         }
       }
@@ -368,14 +463,16 @@ class _StudentAnalyticsState extends State<StudentAnalytics> {
     return count > 0 ? '${(totalMinutes / count).round()} min' : '0 min';
   }
 
-  List<Map<String, dynamic>> _generateMonthlyBreakdown(List<AttendanceRecord> records) {
+  List<Map<String, dynamic>> _generateMonthlyBreakdown(
+    List<AttendanceRecord> records,
+  ) {
     final monthlyData = <String, Map<String, dynamic>>{};
-    
+
     for (var record in records) {
       final key = '${record.eventDate.year}-${record.eventDate.month}';
       final monthName = _getMonthName(record.eventDate.month);
       final year = record.eventDate.year;
-      
+
       monthlyData.putIfAbsent(key, () => {
         'month': '$monthName $year',
         'total': 0,
@@ -394,7 +491,6 @@ class _StudentAnalyticsState extends State<StudentAnalytics> {
       }
     }
 
-    // Calculate rates
     final breakdown = monthlyData.values.map((data) {
       final total = data['total'] as int;
       final attended = (data['present'] as int) + (data['late'] as int);
@@ -402,15 +498,27 @@ class _StudentAnalyticsState extends State<StudentAnalytics> {
       return data;
     }).toList();
 
-    // Sort by date (newest first)
-    breakdown.sort((a, b) => (b['month'] as String).compareTo(a['month'] as String));
+    breakdown.sort((a, b) =>
+        (b['month'] as String).compareTo(a['month'] as String));
 
     return breakdown;
   }
 
   String _getMonthName(int month) {
-    const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 
-                   'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+    const months = [
+      'Jan',
+      'Feb',
+      'Mar',
+      'Apr',
+      'May',
+      'Jun',
+      'Jul',
+      'Aug',
+      'Sep',
+      'Oct',
+      'Nov',
+      'Dec'
+    ];
     return months[month - 1];
   }
 
@@ -442,7 +550,8 @@ class _StudentAnalyticsState extends State<StudentAnalytics> {
   void _showPerfectMonths(List<AttendanceRecord> records) {
     final monthlyRecords = <String, List<AttendanceRecord>>{};
     for (var record in records) {
-      final key = '${_getMonthName(record.eventDate.month)} ${record.eventDate.year}';
+      final key =
+          '${_getMonthName(record.eventDate.month)} ${record.eventDate.year}';
       monthlyRecords.putIfAbsent(key, () => []).add(record);
     }
 
@@ -480,19 +589,11 @@ class _StudentAnalyticsState extends State<StudentAnalytics> {
     );
   }
 
-  void _showSanctions(BuildContext context, provider) {
-    Navigator.pop(context);
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text('Opening Sanctions page...'),
-        behavior: SnackBarBehavior.floating,
-      ),
-    );
-  }
-
   void _showAttendedEvents(List<AttendanceRecord> records) {
-    final attended = records.where((r) => r.status == 'present' || r.status == 'late').toList();
-    
+    final attended = records
+        .where((r) => r.status == 'present' || r.status == 'late')
+        .toList();
+
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
@@ -506,8 +607,11 @@ class _StudentAnalyticsState extends State<StudentAnalytics> {
               final record = attended[index];
               return ListTile(
                 leading: Icon(
-                  record.status == 'present' ? Icons.check_circle : Icons.schedule,
-                  color: record.status == 'present' ? Colors.green : Colors.orange,
+                  record.status == 'present'
+                      ? Icons.check_circle
+                      : Icons.schedule,
+                  color:
+                      record.status == 'present' ? Colors.green : Colors.orange,
                 ),
                 title: Text(record.eventName),
                 subtitle: Text(_formatDate(record.eventDate)),
@@ -525,18 +629,9 @@ class _StudentAnalyticsState extends State<StudentAnalytics> {
     );
   }
 
-  void _showCheckInAnalysis(List<AttendanceRecord> records) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text('Check-in analysis - Coming soon!'),
-        behavior: SnackBarBehavior.floating,
-      ),
-    );
-  }
-
   void _showFullBreakdown(List<AttendanceRecord> records) {
     final breakdown = _generateMonthlyBreakdown(records);
-    
+
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
@@ -596,7 +691,7 @@ class _StudentAnalyticsState extends State<StudentAnalytics> {
     );
   }
 
-  void _generateReport(Map<String, int> stats, List<AttendanceRecord> records) {
+  void _generateReport(List<AttendanceRecord> records) {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
@@ -606,7 +701,10 @@ class _StudentAnalyticsState extends State<StudentAnalytics> {
           children: [
             Text('Generate detailed analytics report for $_selectedPeriod?'),
             const SizedBox(height: 16),
-            const Text('Report will include:', style: TextStyle(fontWeight: FontWeight.bold)),
+            const Text(
+              'Report will include:',
+              style: TextStyle(fontWeight: FontWeight.bold),
+            ),
             const SizedBox(height: 8),
             const Text('• Attendance statistics'),
             const Text('• Monthly breakdown'),
@@ -641,7 +739,8 @@ class _StudentAnalyticsState extends State<StudentAnalytics> {
   }
 }
 
-// Keep all the widget classes from the original file
+// ==================== WIDGET CLASSES ====================
+
 class _MiniStat extends StatelessWidget {
   final String label;
   final String value;
@@ -794,7 +893,8 @@ class _MonthlyBreakdownCard extends StatelessWidget {
                     ],
                   ),
                   Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
                     decoration: BoxDecoration(
                       color: rate == 100 ? Colors.green : Colors.blue,
                       borderRadius: BorderRadius.circular(20),
@@ -883,8 +983,9 @@ class _BreakdownRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final percentage = total > 0 ? (value / total * 100).toStringAsFixed(1) : '0.0';
-    
+    final percentage =
+        total > 0 ? (value / total * 100).toStringAsFixed(1) : '0.0';
+
     return Padding(
       padding: const EdgeInsets.only(bottom: 12),
       child: Row(
